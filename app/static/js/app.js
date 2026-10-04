@@ -280,19 +280,58 @@ function renderTrendChart(trendData, currencySymbol) {
   });
 }
 
+// Mobile Navigation Drawer Handlers
+function openMobileMenu() {
+  const drawer = document.getElementById('mobile-nav-drawer');
+  if (drawer) {
+    drawer.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+  }
+}
+
+function closeMobileMenu() {
+  const drawer = document.getElementById('mobile-nav-drawer');
+  if (drawer) {
+    drawer.classList.add('hidden');
+    document.body.style.overflow = '';
+  }
+}
+
 // Notification Poller
 async function updateNotificationBadge() {
   try {
     const res = await fetch('/api/notifications/unread-count');
     if (res.ok) {
       const data = await res.json();
-      const badge = document.getElementById('notification-badge');
-      if (badge) {
-        if (data.unread_count > 0) {
-          badge.textContent = data.unread_count > 9 ? '9+' : data.unread_count;
-          badge.classList.remove('hidden');
+      const count = data.unread_count || 0;
+      
+      const badgeSidebar = document.getElementById('notification-badge');
+      const badgeHeader = document.getElementById('notification-header-badge');
+      const badgeDrawer = document.getElementById('notification-drawer-badge');
+
+      if (badgeSidebar) {
+        if (count > 0) {
+          badgeSidebar.textContent = count > 9 ? '9+' : count;
+          badgeSidebar.classList.remove('hidden');
         } else {
-          badge.classList.add('hidden');
+          badgeSidebar.classList.add('hidden');
+        }
+      }
+
+      if (badgeHeader) {
+        if (count > 0) {
+          badgeHeader.classList.remove('hidden');
+        } else {
+          badgeHeader.classList.add('hidden');
+        }
+      }
+
+      if (badgeDrawer) {
+        if (count > 0) {
+          badgeDrawer.textContent = count > 9 ? '9+' : count;
+          badgeDrawer.classList.remove('hidden');
+        } else {
+          badgeDrawer.classList.add('hidden');
         }
       }
     }
