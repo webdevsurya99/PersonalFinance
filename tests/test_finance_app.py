@@ -694,6 +694,102 @@ def test_dashboard_live_balance_card(client):
     assert data["total_credit_used"] == 50000.0
     assert data["live_balance"] == 100000.0
 
+def test_admin_backup_engine_and_lifecycle(client):
+    """Verify that Admin Backup exports all data into JSON, creates snapshots, downloads, and deletes them."""
+    from app.core.backup_engine import export_full_database_json, run_scheduled_backup_if_needed
+    import json
+    import os
+
+    db = TestingSessionLocal()
+    admin = User(
+        email="backup_admin@example.com",
+        full_name="Backup Admin",
+        hashed_password=hash_password("AdminPass123!"),
+        is_admin=True,
+        currency_symbol="₹"
+    )
+    user = User(
+        email="regular_user@example.com",
+        full_name="Regular User",
+        hashed_password=hash_password("UserPass123!"),
+        is_admin=False,
+        currency_symbol="₹"
+    )
+    db.add_all([admin, user])
+    db.commit()
+    admin_id = admin.id
+    admin_email = admin.email
+    user_id = user.id
+
+    # Create dummy Bank, Card, Category, Trip, Transaction
+    bank = BankAccount(user_id=user_id, bank_name="HDFC", account_name="Salary", account_number_last4="5544", initial_balance=50000.0, current_balance=45000.0)
+    card = CreditCard(user_id=user_id, bank_name="ICICI", card_name="Rubyx", card_network="Mastercard", last_4_digits="7766", total_limit=100000.0, opening_limit=100000.0, available_limit=90000.0, billing_day=15, due_day=5)
+    cat = Category(user_id=user_id, name="Dining", type="expense", icon="🍕", color="#EF4444")
+    db.add_all([bank, card, cat])
+    db.commit()
+
+    trip = Trip(user_id=user_id, name="Goa Trip", destination="Goa", start_date=datetime.date(2026, 11, 1), end_date=datetime.date(2026, 11, 5), budget=30000.0)
+    db.add(trip)
+    db.commit()
+
+    txn = Transaction(user_id=user_id, type="expense", amount=5000.0, date=datetime.date(2026, 10, 4), category_id=cat.id, bank_account_id=bank.id, trip_id=trip.id, tag="#dining", remarks="Dinner with friends")
+    db.add(txn)
+    db.commit()
+
+    # 1. Direct Python export test
+    backup_data = export_full_database_json(db)
+    assert backup_data["metadata"]["counts"]["users"] == 2
+    assert backup_data["metadata"]["counts"]["bank_accounts"] == 1
+    assert backup_data["metadata"]["counts"]["credit_cards"] == 1
+    assert backup_data["metadata"]["counts"]["transactions"] == 1
+    assert backup_data["metadata"]["counts"]["trips"] == 1
+    assert len(backup_data["transactions"]) == 1
+    assert backup_data["transactions"][0]["amount"] == 5000.0
+    assert backup_data["transactions"][0]["user_email"] == "regular_user@example.com"
+    db.close()
+
+    # 2. HTTP Endpoints
+    token = create_access_token(data={"sub": str(admin_id), "email": admin_email})
+    client.cookies.set("fin_session_token", token)
+    csrf = generate_csrf_token(admin_id)
+
+    # 2a. Live JSON download
+    dl_res = client.get("/admin/backup/download-now")
+    assert dl_res.status_code == 200
+    assert "application/json" in dl_res.headers["content-type"]
+    assert "attachment; filename=" in dl_res.headers["content-disposition"]
+    dl_json = dl_res.json()
+    assert dl_json["metadata"]["application"] == "FinMinimal - Personal Finance"
+    assert dl_json["metadata"]["total_records"] >= 6
+
+    # 2b. Create Snapshot on server
+    snap_res = client.post("/admin/backup/create", data={"csrf_token": csrf}, follow_redirects=False)
+    assert snap_res.status_code == 303
+
+    # Check Admin page displays the new snapshot
+    admin_page = client.get("/admin")
+    assert admin_page.status_code == 200
+    assert "Full Database JSON Backup & Snapshots" in admin_page.text
+    assert "backup_" in admin_page.text
+
+    # 2c. Download Stored Snapshot
+    from app.core.backup_engine import list_stored_backups
+    backups = list_stored_backups()
+    assert len(backups) > 0
+    test_snapshot = backups[0]["filename"]
+
+    snap_dl = client.get(f"/admin/backup/download/{test_snapshot}")
+    assert snap_dl.status_code == 200
+    assert "application/json" in snap_dl.headers["content-type"]
+    file_json = json.loads(snap_dl.content)
+    assert file_json["metadata"]["total_records"] >= 6
+
+    # 2d. Delete Stored Snapshot
+    del_res = client.post(f"/admin/backup/delete/{test_snapshot}", data={"csrf_token": csrf}, follow_redirects=False)
+    assert del_res.status_code == 303
+    assert not os.path.exists(os.path.join("backups", test_snapshot))
+
+
 
 
 

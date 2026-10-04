@@ -16,6 +16,8 @@ from app.routers import (
     trips, export, notifications, admin, pwa
 )
 
+from app.core.backup_engine import run_scheduled_backup_if_needed
+
 def init_db():
     """Create database tables and default admin if missing."""
     Base.metadata.create_all(bind=engine)
@@ -39,6 +41,11 @@ def init_db():
             # Seed default categories for admin
             auth.initialize_default_categories(db, admin_user)
             print(f"[INIT] Created default admin account: {settings.ADMIN_DEFAULT_EMAIL}")
+
+        # Check and run scheduled daily backup snapshot if needed
+        snap = run_scheduled_backup_if_needed(db)
+        if snap:
+            print(f"[BACKUP] Automated scheduled daily backup created: {snap}")
     finally:
         db.close()
 
