@@ -1,4 +1,6 @@
+import os
 import sys
+import socket
 import uvicorn
 from app.config import settings
 
@@ -9,8 +11,6 @@ if sys.platform == "win32":
         sys.stderr.reconfigure(encoding="utf-8")
     except Exception:
         pass
-
-import socket
 
 def get_local_ip():
     try:
@@ -23,15 +23,19 @@ def get_local_ip():
         return "127.0.0.1"
 
 if __name__ == "__main__":
+    port = int(os.environ.get("PORT", settings.PORT or 8000))
+    host = os.environ.get("HOST", "0.0.0.0")
+    debug = settings.DEBUG and os.environ.get("RAILWAY_ENVIRONMENT") is None
+
     local_ip = get_local_ip()
-    print(f"[*] Starting {settings.APP_NAME}...")
-    print(f"[*] Local Access:  http://localhost:{settings.PORT}")
-    print(f"[*] Phone / Wi-Fi: http://{local_ip}:{settings.PORT}")
-    print(f"[*] Security Mode: {settings.APP_ENV}")
+    print(f"[*] Starting {settings.APP_NAME} on port {port}...")
+    print(f"[*] Local Access:  http://localhost:{port}")
+    print(f"[*] Phone / Wi-Fi: http://{local_ip}:{port}")
+    print(f"[*] Environment:   {settings.APP_ENV}")
+
     uvicorn.run(
         "app.main:app",
-        host=settings.HOST,
-        port=settings.PORT,
-        reload=settings.DEBUG
+        host=host,
+        port=port,
+        reload=debug
     )
-
