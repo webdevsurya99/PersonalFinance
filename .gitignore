@@ -61,7 +61,10 @@ desktop.ini
 *.sublime-project
 *.sublime-workspace
 
-# Temporary & exports
+# Temporary & exports & backups
 scratch/
 temp/
 exports/
+backups/*.json
+!backups/.gitkeep
+
