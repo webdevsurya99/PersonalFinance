@@ -302,3 +302,61 @@ setInterval(updateNotificationBadge, 45000);
 document.addEventListener('DOMContentLoaded', () => {
   updateNotificationBadge();
 });
+
+// Custom Date Range Popover Handlers
+function toggleCustomDateDropdown(e) {
+  if (e) {
+    e.stopPropagation();
+    e.preventDefault();
+  }
+  const popover = document.getElementById('custom-date-popover');
+  if (!popover) return;
+  popover.classList.toggle('hidden');
+}
+
+function closeCustomDateDropdown() {
+  const popover = document.getElementById('custom-date-popover');
+  if (popover) {
+    popover.classList.add('hidden');
+  }
+}
+
+function formatLocalDate(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function setDashboardQuickRange(type) {
+  const startInput = document.getElementById('dash-custom-start');
+  const endInput = document.getElementById('dash-custom-end');
+  if (!startInput || !endInput) return;
+
+  const today = new Date();
+  let start = new Date();
+  let end = new Date();
+
+  if (typeof type === 'number') {
+    start.setDate(today.getDate() - type);
+  } else if (type === 'mtd') {
+    start = new Date(today.getFullYear(), today.getMonth(), 1);
+  } else if (type === 'ytd') {
+    start = new Date(today.getFullYear(), 0, 1);
+  }
+
+  startInput.value = formatLocalDate(start);
+  endInput.value = formatLocalDate(end);
+}
+
+// Close custom date popover on click outside
+document.addEventListener('click', (e) => {
+  const popover = document.getElementById('custom-date-popover');
+  const btn = document.getElementById('custom-date-btn');
+  if (popover && !popover.classList.contains('hidden')) {
+    if (!popover.contains(e.target) && (!btn || !btn.contains(e.target))) {
+      popover.classList.add('hidden');
+    }
+  }
+});
+

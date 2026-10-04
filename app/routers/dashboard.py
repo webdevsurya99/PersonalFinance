@@ -43,11 +43,31 @@ def get_date_range_for_period(
     elif period == "this_year":
         start_date = datetime.date(ref_date.year, 1, 1)
         end_date = datetime.date(ref_date.year, 12, 31)
-    elif period == "custom" and start_date_str and end_date_str:
-        try:
-            start_date = datetime.datetime.strptime(start_date_str, "%Y-%m-%d").date()
-            end_date = datetime.datetime.strptime(end_date_str, "%Y-%m-%d").date()
-        except ValueError:
+    elif period == "custom":
+        parsed_start = None
+        parsed_end = None
+        if start_date_str:
+            try:
+                parsed_start = datetime.datetime.strptime(start_date_str.strip(), "%Y-%m-%d").date()
+            except (ValueError, TypeError):
+                pass
+        if end_date_str:
+            try:
+                parsed_end = datetime.datetime.strptime(end_date_str.strip(), "%Y-%m-%d").date()
+            except (ValueError, TypeError):
+                pass
+
+        if parsed_start and parsed_end:
+            if parsed_start > parsed_end:
+                parsed_start, parsed_end = parsed_end, parsed_start
+            start_date, end_date = parsed_start, parsed_end
+        elif parsed_start:
+            start_date = parsed_start
+            end_date = ref_date
+        elif parsed_end:
+            start_date = parsed_end - datetime.timedelta(days=30)
+            end_date = parsed_end
+        else:
             start_date = datetime.date(ref_date.year, ref_date.month, 1)
             _, last_day = calendar.monthrange(ref_date.year, ref_date.month)
             end_date = datetime.date(ref_date.year, ref_date.month, last_day)
@@ -114,8 +134,8 @@ async def dashboard_page(
         Trip.status.in_(["active", "planned"])
     ).all()
 
-    # Recent transactions
-    recent_transactions = txns[:8]
+    # Recent transactions within the selected period
+    recent_transactions = txns[:10]
 
     # CSRF token
     csrf_token = generate_csrf_token(current_user.id)
@@ -130,6 +150,8 @@ async def dashboard_page(
             "period": period,
             "start_date": start_dt,
             "end_date": end_dt,
+            "custom_start_str": start_dt.strftime("%Y-%m-%d"),
+            "custom_end_str": end_dt.strftime("%Y-%m-%d"),
             "total_income": total_income,
             "total_expense": total_expense,
             "net_savings": net_savings,
@@ -192,21 +214,38 @@ async def dashboard_stats_api(
     # Sort categories descending
     sorted_cats = sorted(cat_expenses.values(), key=lambda x: x["amount"], reverse=True)
 
-    # 2. Daily spending trend
+    # 2. Activity / trend breakdown based on period length
     daily_map: Dict[str, Dict[str, float]] = {}
     delta_days = (end_dt - start_dt).days
-    if delta_days <= 90:
+
+    if delta_days <= 62:
+        # Daily timeline
         curr = start_dt
         while curr <= end_dt:
             d_str = curr.strftime("%d %b")
             daily_map[d_str] = {"income": 0.0, "expense": 0.0}
             curr += datetime.timedelta(days=1)
 
-    for t in txns:
-        d_str = t.date.strftime("%d %b")
-        if d_str not in daily_map:
-            daily_map[d_str] = {"income": 0.0, "expense": 0.0}
-        daily_map[d_str][t.type] += t.amount
+        for t in txns:
+            d_str = t.date.strftime("%d %b")
+            if d_str in daily_map:
+                daily_map[d_str][t.type] += t.amount
+    else:
+        # Monthly timeline for longer intervals
+        curr = datetime.date(start_dt.year, start_dt.month, 1)
+        end_month = datetime.date(end_dt.year, end_dt.month, 1)
+        while curr <= end_month:
+            m_str = curr.strftime("%b %y")
+            daily_map[m_str] = {"income": 0.0, "expense": 0.0}
+            # Next month
+            y = curr.year + (1 if curr.month == 12 else 0)
+            m = 1 if curr.month == 12 else curr.month + 1
+            curr = datetime.date(y, m, 1)
+
+        for t in txns:
+            m_str = t.date.strftime("%b %y")
+            if m_str in daily_map:
+                daily_map[m_str][t.type] += t.amount
 
     daily_labels = list(daily_map.keys())
     daily_income = [daily_map[k]["income"] for k in daily_labels]
@@ -216,6 +255,7 @@ async def dashboard_stats_api(
         "period": period,
         "start_date": start_dt.isoformat(),
         "end_date": end_dt.isoformat(),
+        "date_range_display": f"{start_dt.strftime('%d %b')} – {end_dt.strftime('%d %b %Y')}",
         "total_income": total_income,
         "total_expense": total_expense,
         "net_savings": net_savings,
@@ -232,3 +272,4 @@ async def dashboard_stats_api(
             "expense": daily_expense
         }
     })
+

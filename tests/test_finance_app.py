@@ -456,4 +456,88 @@ def test_all_pages_render(client):
         resp = client.get(endpoint)
         assert resp.status_code == 200, f"Endpoint {endpoint} returned status {resp.status_code}"
 
+def test_dashboard_custom_date_range(client):
+    """Verify that dashboard custom date range filters data and charts accurately."""
+    db = TestingSessionLocal()
+    user = User(
+        email="custom_date@example.com",
+        full_name="Date Test User",
+        hashed_password=hash_password("Pass1234!"),
+        is_admin=False,
+        currency_symbol="₹"
+    )
+    db.add(user)
+    db.commit()
+    user_id = user.id
+    user_email = user.email
+
+    cat = Category(user_id=user_id, name="Groceries", type="expense", icon="🛒", color="#10B981")
+    db.add(cat)
+    db.commit()
+    cat_id = cat.id
+
+    # 1. Old txn (August) - should be excluded from September custom range
+    txn_aug = Transaction(
+        user_id=user_id,
+        category_id=cat_id,
+        type="expense",
+        amount=1200.0,
+        date=datetime.date(2026, 8, 20),
+        remarks="August haul"
+    )
+    # 2. September txn (Target) - should be included
+    txn_sep = Transaction(
+        user_id=user_id,
+        category_id=cat_id,
+        type="expense",
+        amount=3500.0,
+        date=datetime.date(2026, 9, 15),
+        remarks="September haul"
+    )
+    # 3. September income (Target) - should be included
+    txn_sep_inc = Transaction(
+        user_id=user_id,
+        type="income",
+        amount=25000.0,
+        date=datetime.date(2026, 9, 1),
+        remarks="September salary"
+    )
+    # 4. October txn - should be excluded from September custom range
+    txn_oct = Transaction(
+        user_id=user_id,
+        category_id=cat_id,
+        type="expense",
+        amount=5000.0,
+        date=datetime.date(2026, 10, 4),
+        remarks="October haul"
+    )
+    db.add_all([txn_aug, txn_sep, txn_sep_inc, txn_oct])
+    db.commit()
+    db.close()
+
+    token = create_access_token(data={"sub": str(user_id), "email": user_email})
+    client.cookies.set("fin_session_token", token)
+
+    # Test Web Page with Custom Range
+    page_res = client.get("/dashboard?period=custom&start_date=2026-09-01&end_date=2026-09-30")
+    assert page_res.status_code == 200
+    assert "01 Sep" in page_res.text
+    assert "30 Sep 2026" in page_res.text
+    assert "Custom Range" in page_res.text
+    assert "September haul" in page_res.text
+    assert "September salary" in page_res.text
+    assert "August haul" not in page_res.text
+
+    # Test API Stats with Custom Range
+    api_res = client.get("/api/dashboard/stats?period=custom&start_date=2026-09-01&end_date=2026-09-30")
+    assert api_res.status_code == 200
+    data = api_res.json()
+    assert data["period"] == "custom"
+    assert data["total_income"] == 25000.0
+    assert data["total_expense"] == 3500.0
+    assert data["net_savings"] == 21500.0
+    assert len(data["category_chart"]["labels"]) == 1
+    assert data["category_chart"]["data"][0] == 3500.0
+
+
 
