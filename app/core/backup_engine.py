@@ -10,8 +10,13 @@ from app.models import (
     Trip, Transaction, Notification, SystemSetting, AuditLog
 )
 from app.core.date_provider import DateProvider
+from app.config import settings
 
-BACKUP_DIR = "backups"
+def get_backup_dir() -> str:
+    """Returns the resolved backup directory path (persistent volume aware)."""
+    return settings.resolved_backup_dir
+
+BACKUP_DIR = get_backup_dir()
 MAX_BACKUP_RETENTION = 30
 
 def get_now_utc() -> datetime.datetime:
@@ -226,13 +231,15 @@ def export_full_database_json(db: Session) -> Dict[str, Any]:
 
 def save_backup_to_disk(
     data: Dict[str, Any], 
-    directory: str = BACKUP_DIR, 
+    directory: Optional[str] = None, 
     max_retention: int = MAX_BACKUP_RETENTION
 ) -> Tuple[str, str]:
     """
     Saves a JSON snapshot file to disk, enforcing retention limit.
     Returns (filename, filepath).
     """
+    if directory is None:
+        directory = get_backup_dir()
     os.makedirs(directory, exist_ok=True)
     timestamp_str = get_now_utc().strftime("%Y-%m-%d_%H%M%S")
     filename = f"backup_{timestamp_str}.json"
@@ -246,8 +253,10 @@ def save_backup_to_disk(
 
     return filename, filepath
 
-def cleanup_old_backups(directory: str = BACKUP_DIR, max_retention: int = MAX_BACKUP_RETENTION) -> None:
+def cleanup_old_backups(directory: Optional[str] = None, max_retention: int = MAX_BACKUP_RETENTION) -> None:
     """Removes older backups beyond the maximum retention limit."""
+    if directory is None:
+        directory = get_backup_dir()
     if not os.path.exists(directory):
         return
 
@@ -274,10 +283,12 @@ def sanitize_backup_filename(filename: str) -> Optional[str]:
         return basename
     return None
 
-def list_stored_backups(directory: str = BACKUP_DIR) -> List[Dict[str, Any]]:
+def list_stored_backups(directory: Optional[str] = None) -> List[Dict[str, Any]]:
     """
     Lists all saved snapshot files with metadata (size, date, total records).
     """
+    if directory is None:
+        directory = get_backup_dir()
     if not os.path.exists(directory):
         return []
 
@@ -319,8 +330,10 @@ def list_stored_backups(directory: str = BACKUP_DIR) -> List[Dict[str, Any]]:
     backups.sort(key=lambda x: x["created_at"], reverse=True)
     return backups
 
-def delete_stored_backup(filename: str, directory: str = BACKUP_DIR) -> bool:
+def delete_stored_backup(filename: str, directory: Optional[str] = None) -> bool:
     """Deletes a stored snapshot file safely."""
+    if directory is None:
+        directory = get_backup_dir()
     safe_name = sanitize_backup_filename(filename)
     if not safe_name:
         return False
@@ -334,10 +347,12 @@ def delete_stored_backup(filename: str, directory: str = BACKUP_DIR) -> bool:
             return False
     return False
 
-def run_scheduled_backup_if_needed(db: Session, directory: str = BACKUP_DIR) -> Optional[str]:
+def run_scheduled_backup_if_needed(db: Session, directory: Optional[str] = None) -> Optional[str]:
     """
     Executes a daily automated snapshot if no backup was created in the last 24 hours.
     """
+    if directory is None:
+        directory = get_backup_dir()
     backups = list_stored_backups(directory)
     now = datetime.datetime.now()
 

@@ -18,7 +18,7 @@ from app.core.backup_engine import (
     list_stored_backups,
     delete_stored_backup,
     sanitize_backup_filename,
-    BACKUP_DIR
+    get_backup_dir
 )
 
 router = APIRouter(tags=["Admin"])
@@ -235,7 +235,7 @@ async def download_stored_backup(
     if not safe_name:
         raise HTTPException(status_code=400, detail="Invalid backup filename.")
 
-    filepath = os.path.join(BACKUP_DIR, safe_name)
+    filepath = os.path.join(get_backup_dir(), safe_name)
     if not os.path.exists(filepath):
         raise HTTPException(status_code=404, detail="Backup snapshot file not found.")
 
