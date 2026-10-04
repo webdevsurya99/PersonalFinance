@@ -1,5 +1,5 @@
 import datetime
-from typing import Optional, List
+from typing import Optional, List, Any
 from fastapi import APIRouter, Request, Depends, HTTPException, status, Form, Query
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
@@ -17,6 +17,19 @@ templates = Jinja2Templates(directory="app/templates")
 
 def get_now_utc() -> datetime.datetime:
     return datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
+
+def parse_optional_int(val: Optional[Any]) -> Optional[int]:
+    if val is None:
+        return None
+    if isinstance(val, int):
+        return val
+    val_str = str(val).strip()
+    if not val_str:
+        return None
+    try:
+        return int(val_str)
+    except (ValueError, TypeError):
+        return None
 
 def apply_balance_delta(db: Session, txn_type: str, amount: float, bank_id: Optional[int], card_id: Optional[int], is_reversal: bool = False):
     """
@@ -46,10 +59,10 @@ def apply_balance_delta(db: Session, txn_type: str, amount: float, bank_id: Opti
 async def list_transactions(
     request: Request,
     type: Optional[str] = Query(None),
-    category_id: Optional[int] = Query(None),
-    account_id: Optional[int] = Query(None),
-    card_id: Optional[int] = Query(None),
-    trip_id: Optional[int] = Query(None),
+    category_id: Optional[str] = Query(None),
+    account_id: Optional[str] = Query(None),
+    card_id: Optional[str] = Query(None),
+    trip_id: Optional[str] = Query(None),
     tag: Optional[str] = Query(None),
     q: Optional[str] = Query(None),
     start_date: Optional[str] = Query(None),
@@ -59,20 +72,25 @@ async def list_transactions(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
+    c_id = parse_optional_int(category_id)
+    acc_id = parse_optional_int(account_id)
+    crd_id = parse_optional_int(card_id)
+    trp_id = parse_optional_int(trip_id)
+
     query = db.query(Transaction).filter(Transaction.user_id == current_user.id)
 
-    if type in ("expense", "income"):
-        query = query.filter(Transaction.type == type)
-    if category_id:
-        query = query.filter(Transaction.category_id == category_id)
-    if account_id:
-        query = query.filter(Transaction.bank_account_id == account_id)
-    if card_id:
-        query = query.filter(Transaction.credit_card_id == card_id)
-    if trip_id:
-        query = query.filter(Transaction.trip_id == trip_id)
-    if tag:
-        query = query.filter(Transaction.tag.ilike(f"%{tag}%"))
+    if type and type.strip() in ("expense", "income"):
+        query = query.filter(Transaction.type == type.strip())
+    if c_id:
+        query = query.filter(Transaction.category_id == c_id)
+    if acc_id:
+        query = query.filter(Transaction.bank_account_id == acc_id)
+    if crd_id:
+        query = query.filter(Transaction.credit_card_id == crd_id)
+    if trp_id:
+        query = query.filter(Transaction.trip_id == trp_id)
+    if tag and tag.strip():
+        query = query.filter(Transaction.tag.ilike(f"%{tag.strip()}%"))
     if q:
         search = f"%{q}%"
         query = query.filter(or_(Transaction.remarks.ilike(search), Transaction.tag.ilike(search)))

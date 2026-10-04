@@ -1,6 +1,6 @@
 import datetime
 import calendar
-from typing import Optional
+from typing import Optional, Any
 from fastapi import APIRouter, Request, Depends, HTTPException, Query
 from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
@@ -19,6 +19,19 @@ templates = Jinja2Templates(directory="app/templates")
 
 def get_now_utc() -> datetime.datetime:
     return datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
+
+def parse_optional_int(val: Optional[Any]) -> Optional[int]:
+    if val is None:
+        return None
+    if isinstance(val, int):
+        return val
+    val_str = str(val).strip()
+    if not val_str:
+        return None
+    try:
+        return int(val_str)
+    except (ValueError, TypeError):
+        return None
 
 def query_export_transactions(
     db: Session,
@@ -98,17 +111,23 @@ async def export_excel_download(
     start_date: Optional[str] = Query(None),
     end_date: Optional[str] = Query(None),
     type: Optional[str] = Query(None),
-    category_id: Optional[int] = Query(None),
-    account_id: Optional[int] = Query(None),
-    card_id: Optional[int] = Query(None),
-    trip_id: Optional[int] = Query(None),
+    category_id: Optional[str] = Query(None),
+    account_id: Optional[str] = Query(None),
+    card_id: Optional[str] = Query(None),
+    trip_id: Optional[str] = Query(None),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
+    cat_id = parse_optional_int(category_id)
+    acc_id = parse_optional_int(account_id)
+    c_id = parse_optional_int(card_id)
+    tr_id = parse_optional_int(trip_id)
+    t_filter = type.strip() if type and type.strip() in ("expense", "income") else None
+
     txns, start_dt, end_dt = query_export_transactions(
         db, current_user.id, period, start_date, end_date,
-        type_filter=type, category_id=category_id,
-        account_id=account_id, card_id=card_id, trip_id=trip_id
+        type_filter=t_filter, category_id=cat_id,
+        account_id=acc_id, card_id=c_id, trip_id=tr_id
     )
 
     excel_stream = generate_excel_statement(txns, current_user, start_dt, end_dt)
@@ -136,17 +155,23 @@ async def export_pdf_download(
     start_date: Optional[str] = Query(None),
     end_date: Optional[str] = Query(None),
     type: Optional[str] = Query(None),
-    category_id: Optional[int] = Query(None),
-    account_id: Optional[int] = Query(None),
-    card_id: Optional[int] = Query(None),
-    trip_id: Optional[int] = Query(None),
+    category_id: Optional[str] = Query(None),
+    account_id: Optional[str] = Query(None),
+    card_id: Optional[str] = Query(None),
+    trip_id: Optional[str] = Query(None),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
+    cat_id = parse_optional_int(category_id)
+    acc_id = parse_optional_int(account_id)
+    c_id = parse_optional_int(card_id)
+    tr_id = parse_optional_int(trip_id)
+    t_filter = type.strip() if type and type.strip() in ("expense", "income") else None
+
     txns, start_dt, end_dt = query_export_transactions(
         db, current_user.id, period, start_date, end_date,
-        type_filter=type, category_id=category_id,
-        account_id=account_id, card_id=card_id, trip_id=trip_id
+        type_filter=t_filter, category_id=cat_id,
+        account_id=acc_id, card_id=c_id, trip_id=tr_id
     )
 
     pdf_stream = generate_pdf_statement(txns, current_user, start_dt, end_dt)
@@ -167,3 +192,4 @@ async def export_pdf_download(
         media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'}
     )
+

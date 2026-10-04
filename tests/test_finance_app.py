@@ -400,6 +400,16 @@ def test_export_statements(client):
     assert "application/pdf" in pdf_res.headers["content-type"]
     assert pdf_res.content.startswith(b"%PDF")
 
+    # Test with empty query parameters as submitted by web forms
+    excel_empty = client.get("/export/excel?period=this_month&start_date=&end_date=&type=&category_id=&account_id=&card_id=&trip_id=")
+    assert excel_empty.status_code == 200
+
+    pdf_empty = client.get("/export/pdf?period=this_month&start_date=&end_date=&type=&category_id=&account_id=&card_id=&trip_id=")
+    assert pdf_empty.status_code == 200
+
+    txns_empty = client.get("/transactions?type=&category_id=&account_id=&card_id=&trip_id=&tag=&q=&start_date=&end_date=")
+    assert txns_empty.status_code == 200
+
 def test_security_headers_and_pwa(client):
     """Verify OWASP security headers, PWA manifest delivery, and local icon assets."""
     res = client.get("/manifest.json")
