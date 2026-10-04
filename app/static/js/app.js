@@ -134,11 +134,15 @@ async function loadDashboardCharts(period, startDate = '', endDate = '') {
     renderTrendChart(data.daily_chart, data.currency_symbol);
 
     // Update KPI numbers dynamically if elements exist
+    const liveEl = document.getElementById('kpi-live-balance');
     const incEl = document.getElementById('kpi-total-income');
     const expEl = document.getElementById('kpi-total-expense');
     const savEl = document.getElementById('kpi-net-savings');
     const rateEl = document.getElementById('kpi-savings-rate');
 
+    if (liveEl && data.live_balance !== undefined) {
+      liveEl.textContent = `${data.currency_symbol} ${Number(data.live_balance).toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
+    }
     if (incEl) incEl.textContent = `${data.currency_symbol} ${Number(data.total_income).toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
     if (expEl) expEl.textContent = `${data.currency_symbol} ${Number(data.total_expense).toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
     if (savEl) savEl.textContent = `${data.currency_symbol} ${Number(data.net_savings).toLocaleString('en-IN', {minimumFractionDigits: 2})}`;

@@ -647,6 +647,54 @@ def test_credit_card_repayment_lifecycle(client):
     assert card_final.available_limit == 200000.0
     db3.close()
 
+def test_dashboard_live_balance_card(client):
+    """Verify that Dashboard Live Balance correctly computes (All Banks - CC Outstanding)."""
+    db = TestingSessionLocal()
+    user = User(
+        email="live_bal@example.com",
+        full_name="Live Position User",
+        hashed_password=hash_password("Pass1234!"),
+        is_admin=False,
+        currency_symbol="₹"
+    )
+    db.add(user)
+    db.commit()
+    user_id = user.id
+    user_email = user.email
+
+    # Bank 1: 1,00,000, Bank 2: 50,000 => Total Banks = 1,50,000
+    b1 = BankAccount(user_id=user_id, bank_name="HDFC", account_name="Savings", account_number_last4="1111", initial_balance=100000.0, current_balance=100000.0)
+    b2 = BankAccount(user_id=user_id, bank_name="ICICI", account_name="Salary", account_number_last4="2222", initial_balance=50000.0, current_balance=50000.0)
+
+    # Card 1: Limit 2,00,000, Available 1,60,000 => Spent = 40,000
+    # Card 2: Limit 1,00,000, Available 90,000 => Spent = 10,000
+    # Total CC Outstanding = 50,000
+    c1 = CreditCard(user_id=user_id, bank_name="HDFC", card_name="Millennia", card_network="Visa", last_4_digits="3333", total_limit=200000.0, opening_limit=200000.0, available_limit=160000.0, billing_day=10, due_day=1)
+    c2 = CreditCard(user_id=user_id, bank_name="SBI", card_name="Cashback", card_network="Visa", last_4_digits="4444", total_limit=100000.0, opening_limit=100000.0, available_limit=90000.0, billing_day=15, due_day=5)
+
+    db.add_all([b1, b2, c1, c2])
+    db.commit()
+    db.close()
+
+    token = create_access_token(data={"sub": str(user_id), "email": user_email})
+    client.cookies.set("fin_session_token", token)
+
+    # Expected Live Balance = 1,50,000 - 50,000 = 1,00,000
+    page_res = client.get("/dashboard")
+    assert page_res.status_code == 200
+    assert "Live Balance" in page_res.text
+    assert "100000.00" in page_res.text
+    assert "Banks − CC Due" in page_res.text
+    assert "Surplus" in page_res.text or "Net +" in page_res.text
+
+    api_res = client.get("/api/dashboard/stats")
+    assert api_res.status_code == 200
+    data = api_res.json()
+    assert data["total_bank_balance"] == 150000.0
+    assert data["total_credit_used"] == 50000.0
+    assert data["live_balance"] == 100000.0
+
+
 
 
 

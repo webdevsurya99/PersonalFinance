@@ -122,7 +122,8 @@ async def dashboard_page(
     ).all()
     total_credit_limit = sum(c.total_limit for c in credit_cards)
     total_available_credit = sum(c.available_limit for c in credit_cards)
-    total_credit_used = total_credit_limit - total_available_credit
+    total_credit_used = max(0.0, total_credit_limit - total_available_credit)
+    live_balance = total_bank_balance - total_credit_used
 
     # Categories & Trips for fast lodging modal
     categories = db.query(Category).filter(
@@ -162,6 +163,7 @@ async def dashboard_page(
             "total_credit_limit": total_credit_limit,
             "total_available_credit": total_available_credit,
             "total_credit_used": total_credit_used,
+            "live_balance": live_balance,
             "categories": categories,
             "active_trips": active_trips,
             "recent_transactions": recent_transactions,
@@ -251,6 +253,22 @@ async def dashboard_stats_api(
     daily_income = [daily_map[k]["income"] for k in daily_labels]
     daily_expense = [daily_map[k]["expense"] for k in daily_labels]
 
+    # Live balance calculations
+    bank_accounts = db.query(BankAccount).filter(
+        BankAccount.user_id == current_user.id,
+        BankAccount.is_active == True
+    ).all()
+    total_bank_balance = sum(b.current_balance for b in bank_accounts)
+
+    credit_cards = db.query(CreditCard).filter(
+        CreditCard.user_id == current_user.id,
+        CreditCard.is_active == True
+    ).all()
+    total_credit_limit = sum(c.total_limit for c in credit_cards)
+    total_available_credit = sum(c.available_limit for c in credit_cards)
+    total_credit_used = max(0.0, total_credit_limit - total_available_credit)
+    live_balance = total_bank_balance - total_credit_used
+
     return JSONResponse({
         "period": period,
         "start_date": start_dt.isoformat(),
@@ -260,6 +278,9 @@ async def dashboard_stats_api(
         "total_expense": total_expense,
         "net_savings": net_savings,
         "savings_rate": savings_rate,
+        "total_bank_balance": total_bank_balance,
+        "total_credit_used": total_credit_used,
+        "live_balance": live_balance,
         "currency_symbol": current_user.currency_symbol,
         "category_chart": {
             "labels": [c["label"] for c in sorted_cats],
