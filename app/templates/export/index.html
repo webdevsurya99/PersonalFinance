@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block title %}Export Statements - FinMinimal{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto space-y-6">
+
+    <!-- Header -->
+    <div>
+        <h2 class="text-2xl font-bold tracking-tight text-white">Export Financial Statements</h2>
+        <p class="text-xs sm:text-sm text-slate-400">Download audit-ready Excel sheets and executive PDF statements for taxes, accounting, or record keeping</p>
+    </div>
+
+    <!-- Export Configuration Form -->
+    <div class="glass-card rounded-3xl p-6 sm:p-8 border border-slate-800 shadow-2xl space-y-6">
+        
+        <form id="export-form" method="GET" class="space-y-5">
+            
+            <!-- Time Period -->
+            <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2">1. Select Statement Period *</label>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                    <label class="p-3 rounded-xl border border-slate-800 bg-slate-900/60 has-[:checked]:bg-blue-600/20 has-[:checked]:border-blue-500/50 has-[:checked]:text-blue-400 text-slate-300 text-xs font-medium flex items-center justify-center cursor-pointer transition-all">
+                        <input type="radio" name="period" value="this_month" checked onchange="toggleCustomDates(false)" class="hidden">
+                        <span>This Month</span>
+                    </label>
+                    <label class="p-3 rounded-xl border border-slate-800 bg-slate-900/60 has-[:checked]:bg-blue-600/20 has-[:checked]:border-blue-500/50 has-[:checked]:text-blue-400 text-slate-300 text-xs font-medium flex items-center justify-center cursor-pointer transition-all">
+                        <input type="radio" name="period" value="last_month" onchange="toggleCustomDates(false)" class="hidden">
+                        <span>Last Month</span>
+                    </label>
+                    <label class="p-3 rounded-xl border border-slate-800 bg-slate-900/60 has-[:checked]:bg-blue-600/20 has-[:checked]:border-blue-500/50 has-[:checked]:text-blue-400 text-slate-300 text-xs font-medium flex items-center justify-center cursor-pointer transition-all">
+                        <input type="radio" name="period" value="last_90_days" onchange="toggleCustomDates(false)" class="hidden">
+                        <span>Last 90 Days</span>
+                    </label>
+                    <label class="p-3 rounded-xl border border-slate-800 bg-slate-900/60 has-[:checked]:bg-blue-600/20 has-[:checked]:border-blue-500/50 has-[:checked]:text-blue-400 text-slate-300 text-xs font-medium flex items-center justify-center cursor-pointer transition-all">
+                        <input type="radio" name="period" value="this_year" onchange="toggleCustomDates(false)" class="hidden">
+                        <span>This Year</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Custom Date Range (Conditional) -->
+            <div id="custom-dates-box" class="p-4 bg-slate-900/60 rounded-2xl border border-slate-800 space-y-3">
+                <label class="block text-xs font-semibold text-slate-300">Custom Date Range (Optional)</label>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <span class="text-[11px] text-slate-400 block mb-1">From Date</span>
+                        <input type="date" name="start_date" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white">
+                    </div>
+                    <div>
+                        <span class="text-[11px] text-slate-400 block mb-1">To Date</span>
+                        <input type="date" name="end_date" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filters (Optional) -->
+            <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2">2. Optional Filters</label>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-[11px] text-slate-400 mb-1">Transaction Type</label>
+                        <select name="type" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-blue-500">
+                            <option value="">All (Expenses & Incomes)</option>
+                            <option value="expense">Expenses Only</option>
+                            <option value="income">Incomes Only</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-[11px] text-slate-400 mb-1">Category</label>
+                        <select name="category_id" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-blue-500">
+                            <option value="">All Categories</option>
+                            {% for cat in categories %}
+                            <option value="{{ cat.id }}">{{ cat.icon }} {{ cat.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-[11px] text-slate-400 mb-1">Trip / Event</label>
+                        <select name="trip_id" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-blue-500">
+                            <option value="">All Transactions</option>
+                            {% for trip in trips %}
+                            <option value="{{ trip.id }}">✈️ {{ trip.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Download Buttons -->
+            <div class="pt-4 border-t border-slate-800 space-y-3">
+                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300">3. Download Format</label>
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <!-- Excel Button -->
+                    <button type="button" onclick="submitExport('/export/excel')" class="p-4 rounded-2xl bg-emerald-950/40 hover:bg-emerald-900/50 border border-emerald-500/40 flex items-center gap-3.5 transition-all group text-left cursor-pointer">
+                        <div class="w-11 h-11 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xl shrink-0 group-hover:scale-105 transition-transform">
+                            <i class="fa-regular fa-file-excel"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-sm text-white group-hover:text-emerald-300">Excel Statement</h4>
+                            <p class="text-[11px] text-slate-400">Styled spreadsheet with formulas (.xlsx)</p>
+                        </div>
+                    </button>
+
+                    <!-- PDF Button -->
+                    <button type="button" onclick="submitExport('/export/pdf')" class="p-4 rounded-2xl bg-rose-950/40 hover:bg-rose-900/50 border border-rose-500/40 flex items-center gap-3.5 transition-all group text-left cursor-pointer">
+                        <div class="w-11 h-11 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center text-xl shrink-0 group-hover:scale-105 transition-transform">
+                            <i class="fa-regular fa-file-pdf"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-sm text-white group-hover:text-rose-300">PDF Statement</h4>
+                            <p class="text-[11px] text-slate-400">Executive report with summary boxes (.pdf)</p>
+                        </div>
+                    </button>
+                </div>
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    function submitExport(endpoint) {
+        const form = document.getElementById('export-form');
+        const formData = new FormData(form);
+        const params = new URLSearchParams(formData);
+        window.location.href = `${endpoint}?${params.toString()}`;
+    }
+</script>
+{% endblock %}

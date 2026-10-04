@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+
+{% block title %}Categories Manager - FinMinimal{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Header & Actions -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <h2 class="text-2xl font-bold tracking-tight text-white">Categories Management</h2>
+            <p class="text-xs sm:text-sm text-slate-400">Organize your expenses and incomes with custom icons and color tags</p>
+        </div>
+        <div class="flex items-center gap-2">
+            <button onclick="document.getElementById('new-category-modal').classList.remove('hidden')" class="py-2.5 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold rounded-xl text-xs flex items-center gap-2 shadow-lg shadow-blue-600/25 cursor-pointer">
+                <i class="fa-solid fa-plus"></i>
+                <span>Add Category</span>
+            </button>
+            <form action="/categories/reset-defaults" method="POST" onsubmit="return confirm('Restore all default categories?')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button type="submit" class="py-2.5 px-3 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-xl text-xs border border-slate-700 font-medium cursor-pointer" title="Reset Default Categories">
+                    <i class="fa-solid fa-rotate-left"></i>
+                    <span class="hidden sm:inline ml-1">Restore Defaults</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Expense Categories Grid -->
+    <div class="space-y-3">
+        <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
+            <h3 class="font-bold text-base text-white">Expense Categories</h3>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+            {% for cat in categories if cat.type == 'expense' %}
+            <div class="glass-card p-4 rounded-2xl border border-slate-800 flex items-center justify-between hover:border-slate-700 transition-all">
+                <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0 shadow-sm" style="background-color: {{ cat.color }}20; color: {{ cat.color }}; border: 1px solid {{ cat.color }}40;">
+                        <span>{{ cat.icon }}</span>
+                    </div>
+                    <div class="min-w-0">
+                        <h4 class="font-bold text-sm text-white truncate">{{ cat.name }}</h4>
+                        <p class="text-[11px] text-slate-400">{{ cat_stats.get(cat.id, 0) }} logged transactions</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-1">
+                    <button onclick="openEditCategoryModal({{ cat.id }}, '{{ cat.name }}', '{{ cat.type }}', '{{ cat.icon }}', '{{ cat.color }}')" class="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800" title="Edit">
+                        <i class="fa-regular fa-pen-to-square text-xs"></i>
+                    </button>
+                    <form action="/categories/{{ cat.id }}/delete" method="POST" onsubmit="return confirm('Delete category {{ cat.name }}?')">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                        <button type="submit" class="p-1.5 text-slate-400 hover:text-rose-400 rounded-lg hover:bg-slate-800 cursor-pointer" title="Delete">
+                            <i class="fa-regular fa-trash-can text-xs"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Income Categories Grid -->
+    <div class="space-y-3 pt-4">
+        <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+            <h3 class="font-bold text-base text-white">Income Categories</h3>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+            {% for cat in categories if cat.type == 'income' %}
+            <div class="glass-card p-4 rounded-2xl border border-slate-800 flex items-center justify-between hover:border-slate-700 transition-all">
+                <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0 shadow-sm" style="background-color: {{ cat.color }}20; color: {{ cat.color }}; border: 1px solid {{ cat.color }}40;">
+                        <span>{{ cat.icon }}</span>
+                    </div>
+                    <div class="min-w-0">
+                        <h4 class="font-bold text-sm text-white truncate">{{ cat.name }}</h4>
+                        <p class="text-[11px] text-slate-400">{{ cat_stats.get(cat.id, 0) }} logged transactions</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-1">
+                    <button onclick="openEditCategoryModal({{ cat.id }}, '{{ cat.name }}', '{{ cat.type }}', '{{ cat.icon }}', '{{ cat.color }}')" class="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800" title="Edit">
+                        <i class="fa-regular fa-pen-to-square text-xs"></i>
+                    </button>
+                    <form action="/categories/{{ cat.id }}/delete" method="POST" onsubmit="return confirm('Delete category {{ cat.name }}?')">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                        <button type="submit" class="p-1.5 text-slate-400 hover:text-rose-400 rounded-lg hover:bg-slate-800 cursor-pointer" title="Delete">
+                            <i class="fa-regular fa-trash-can text-xs"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+</div>
+
+<!-- New Category Modal -->
+<div id="new-category-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+    <div class="w-full max-w-md bg-[#161F30] border border-slate-700 rounded-2xl shadow-2xl overflow-hidden p-6 space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <h3 class="font-bold text-base text-white">Create New Category</h3>
+            <button onclick="document.getElementById('new-category-modal').classList.add('hidden')" class="text-slate-400 hover:text-white">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <form action="/categories/new" method="POST" class="space-y-4">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+            <div class="grid grid-cols-2 gap-2 p-1 bg-slate-900 rounded-xl border border-slate-800">
+                <label class="flex items-center justify-center gap-2 py-2 rounded-lg cursor-pointer text-xs font-semibold has-[:checked]:bg-rose-500/20 has-[:checked]:text-rose-400 text-slate-400">
+                    <input type="radio" name="type" value="expense" checked class="hidden">
+                    <span>Expense</span>
+                </label>
+                <label class="flex items-center justify-center gap-2 py-2 rounded-lg cursor-pointer text-xs font-semibold has-[:checked]:bg-emerald-500/20 has-[:checked]:text-emerald-400 text-slate-400">
+                    <input type="radio" name="type" value="income" class="hidden">
+                    <span>Income</span>
+                </label>
+            </div>
+
+            <div>
+                <label class="block text-xs font-medium text-slate-300 mb-1">Category Name *</label>
+                <input type="text" name="name" required placeholder="e.g. Coffee & Snacks" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-blue-500">
+            </div>
+
+            <div>
+                <label class="block text-xs font-medium text-slate-300 mb-1.5">Pick Icon / Emoji</label>
+                <div class="flex items-center gap-2 mb-2">
+                    <input type="text" id="new-icon-input" name="icon" value="🍔" maxlength="4" class="w-16 text-center text-xl py-1.5 bg-slate-900 border border-slate-700 rounded-xl text-white">
+                    <span class="text-xs text-slate-400">Or choose below:</span>
+                </div>
+                <div class="grid grid-cols-8 gap-1.5 max-h-32 overflow-y-auto p-2 bg-slate-900/60 rounded-xl border border-slate-800">
+                    {% for ic in popular_icons %}
+                    <button type="button" onclick="document.getElementById('new-icon-input').value = '{{ ic }}'" class="p-1.5 hover:bg-slate-700 rounded-lg text-base transition-colors cursor-pointer">
+                        {{ ic }}
+                    </button>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-medium text-slate-300 mb-1">Color Theme</label>
+                <input type="color" name="color" value="#3B82F6" class="w-full h-10 bg-slate-900 border border-slate-700 rounded-xl p-1 cursor-pointer">
+            </div>
+
+            <div class="pt-3 flex justify-end gap-2">
+                <button type="button" onclick="document.getElementById('new-category-modal').classList.add('hidden')" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold">
+                    Cancel
+                </button>
+                <button type="submit" class="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-lg shadow-blue-600/30">
+                    Save Category
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Category Modal -->
+<div id="edit-category-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+    <div class="w-full max-w-md bg-[#161F30] border border-slate-700 rounded-2xl shadow-2xl overflow-hidden p-6 space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <h3 class="font-bold text-base text-white">Edit Category</h3>
+            <button onclick="document.getElementById('edit-category-modal').classList.add('hidden')" class="text-slate-400 hover:text-white">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <form id="edit-category-form" method="POST" class="space-y-4">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+            <div class="grid grid-cols-2 gap-2 p-1 bg-slate-900 rounded-xl border border-slate-800">
+                <label class="flex items-center justify-center gap-2 py-2 rounded-lg cursor-pointer text-xs font-semibold has-[:checked]:bg-rose-500/20 has-[:checked]:text-rose-400 text-slate-400">
+                    <input type="radio" id="edit-type-expense" name="type" value="expense" class="hidden">
+                    <span>Expense</span>
+                </label>
+                <label class="flex items-center justify-center gap-2 py-2 rounded-lg cursor-pointer text-xs font-semibold has-[:checked]:bg-emerald-500/20 has-[:checked]:text-emerald-400 text-slate-400">
+                    <input type="radio" id="edit-type-income" name="type" value="income" class="hidden">
+                    <span>Income</span>
+                </label>
+            </div>
+
+            <div>
+                <label class="block text-xs font-medium text-slate-300 mb-1">Category Name *</label>
+                <input type="text" id="edit-name-input" name="name" required class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-blue-500">
+            </div>
+
+            <div>
+                <label class="block text-xs font-medium text-slate-300 mb-1.5">Pick Icon / Emoji</label>
+                <div class="flex items-center gap-2 mb-2">
+                    <input type="text" id="edit-icon-input" name="icon" maxlength="4" class="w-16 text-center text-xl py-1.5 bg-slate-900 border border-slate-700 rounded-xl text-white">
+                    <span class="text-xs text-slate-400">Or choose below:</span>
+                </div>
+                <div class="grid grid-cols-8 gap-1.5 max-h-32 overflow-y-auto p-2 bg-slate-900/60 rounded-xl border border-slate-800">
+                    {% for ic in popular_icons %}
+                    <button type="button" onclick="document.getElementById('edit-icon-input').value = '{{ ic }}'" class="p-1.5 hover:bg-slate-700 rounded-lg text-base transition-colors cursor-pointer">
+                        {{ ic }}
+                    </button>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-medium text-slate-300 mb-1">Color Theme</label>
+                <input type="color" id="edit-color-input" name="color" class="w-full h-10 bg-slate-900 border border-slate-700 rounded-xl p-1 cursor-pointer">
+            </div>
+
+            <div class="pt-3 flex justify-end gap-2">
+                <button type="button" onclick="document.getElementById('edit-category-modal').classList.add('hidden')" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold">
+                    Cancel
+                </button>
+                <button type="submit" class="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-lg shadow-blue-600/30">
+                    Update Category
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    function openEditCategoryModal(id, name, type, icon, color) {
+        document.getElementById('edit-category-form').action = `/categories/${id}/edit`;
+        document.getElementById('edit-name-input').value = name;
+        document.getElementById('edit-icon-input').value = icon;
+        document.getElementById('edit-color-input').value = color;
+
+        if (type === 'income') {
+            document.getElementById('edit-type-income').checked = true;
+        } else {
+            document.getElementById('edit-type-expense').checked = true;
+        }
+
+        const modal = document.getElementById('edit-category-modal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+</script>
+{% endblock %}

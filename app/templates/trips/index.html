@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block title %}Trips & Vacations - FinMinimal{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Header & Action -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <h2 class="text-2xl font-bold tracking-tight text-white">Trips & Vacations</h2>
+            <p class="text-xs sm:text-sm text-slate-400">Track holiday & trip budgets seamlessly without duplicate expense logging</p>
+        </div>
+        <button onclick="document.getElementById('new-trip-modal').classList.remove('hidden')" class="py-2.5 px-4 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-semibold rounded-xl text-xs flex items-center gap-2 shadow-lg shadow-cyan-600/25 cursor-pointer">
+            <i class="fa-solid fa-plus"></i>
+            <span>Create New Trip</span>
+        </button>
+    </div>
+
+    <!-- Trips Grid -->
+    {% if trips_data %}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for item in trips_data %}
+        {% set trip = item.trip %}
+        <div class="glass-card rounded-3xl p-6 border border-slate-800 flex flex-col justify-between hover:border-slate-700 transition-all group relative overflow-hidden">
+            
+            <!-- Top Gradient bar -->
+            <div class="absolute top-0 left-0 right-0 h-1.5" style="background-color: {{ trip.color }};"></div>
+
+            <div>
+                <div class="flex items-start justify-between mb-2">
+                    <span class="text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full {% if trip.status == 'active' %}bg-emerald-500/15 text-emerald-400 border border-emerald-500/30{% elif trip.status == 'completed' %}bg-slate-700/50 text-slate-300{% else %}bg-blue-500/15 text-blue-400{% endif %}">
+                        {{ trip.status }}
+                    </span>
+                    <a href="/trips/{{ trip.id }}" class="text-xs font-semibold text-cyan-400 group-hover:translate-x-0.5 transition-transform flex items-center gap-1">
+                        <span>Details</span>
+                        <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                    </a>
+                </div>
+
+                <a href="/trips/{{ trip.id }}" class="block">
+                    <h3 class="font-extrabold text-lg text-white group-hover:text-cyan-400 transition-colors">{{ trip.name }}</h3>
+                    <p class="text-xs text-slate-400 mt-1 flex items-center gap-1.5">
+                        <i class="fa-solid fa-location-dot text-rose-400"></i>
+                        <span>{{ trip.destination }}</span>
+                    </p>
+                    <p class="text-[11px] text-slate-500 mt-0.5">
+                        <i class="fa-regular fa-calendar text-slate-500 mr-1"></i>
+                        {{ trip.start_date.strftime('%d %b %Y') }} &ndash; {{ trip.end_date.strftime('%d %b %Y') }}
+                    </p>
+                </a>
+            </div>
+
+            <div class="mt-6 pt-4 border-t border-slate-800/80">
+                <div class="flex items-baseline justify-between text-xs mb-1.5">
+                    <span class="text-slate-400 font-medium">Spent: <b class="text-white">{{ user.currency_symbol }} {{ "%.2f"|format(item.spent) }}</b></span>
+                    <span class="text-slate-400">Budget: {{ user.currency_symbol }} {{ "%.2f"|format(trip.budget) }}</span>
+                </div>
+
+                <!-- Progress Bar -->
+                <div class="w-full bg-slate-800 rounded-full h-2.5 overflow-hidden">
+                    <div class="h-2.5 rounded-full transition-all duration-500 {% if item.is_overbudget %}bg-rose-500{% elif item.spent_pct > 80 %}bg-amber-500{% else %}bg-cyan-500{% endif %}" style="width: {{ item.spent_pct }}%"></div>
+                </div>
+
+                <div class="flex items-center justify-between text-[11px] text-slate-400 mt-2">
+                    <span>{{ item.raw_spent_pct }}% of budget</span>
+                    {% if item.is_overbudget %}
+                    <span class="text-rose-400 font-bold">⚠️ Over by {{ user.currency_symbol }}{{ "%.2f"|format(item.spent - trip.budget) }}</span>
+                    {% else %}
+                    <span class="text-emerald-400 font-medium">{{ user.currency_symbol }}{{ "%.2f"|format(item.remaining) }} left</span>
+                    {% endif %}
+                </div>
+            </div>
+
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="glass-card rounded-2xl p-12 text-center text-slate-400 border border-slate-800">
+        <i class="fa-solid fa-plane-departure text-4xl text-slate-600 mb-3 block"></i>
+        <h3 class="text-base font-bold text-slate-200">No Trips Created Yet</h3>
+        <p class="text-xs text-slate-500 max-w-sm mx-auto mt-1">Create your upcoming vacation or business trip to track expenses seamlessly without double entry.</p>
+        <button onclick="document.getElementById('new-trip-modal').classList.remove('hidden')" class="mt-4 px-5 py-2.5 bg-cyan-600 hover:bg-cyan-500 text-white font-semibold rounded-xl text-xs">
+            Plan First Trip
+        </button>
+    </div>
+    {% endif %}
+
+</div>
+
+<!-- New Trip Modal -->
+<div id="new-trip-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+    <div class="w-full max-w-md bg-[#161F30] border border-slate-700 rounded-2xl shadow-2xl overflow-hidden p-6 space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <h3 class="font-bold text-base text-white">Plan New Trip</h3>
+            <button onclick="document.getElementById('new-trip-modal').classList.add('hidden')" class="text-slate-400 hover:text-white">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <form action="/trips/new" method="POST" class="space-y-4">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+            <div>
+                <label class="block text-xs font-medium text-slate-300 mb-1">Trip Name *</label>
+                <input type="text" name="name" required placeholder="e.g. Goa Beach Vacation 2026" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-cyan-500">
+            </div>
+
+            <div>
+                <label class="block text-xs font-medium text-slate-300 mb-1">Destination *</label>
+                <input type="text" name="destination" required placeholder="e.g. North Goa, India" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-cyan-500">
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Start Date *</label>
+                    <input type="date" name="start_date" value="{{ current_date.strftime('%Y-%m-%d') }}" required class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-cyan-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">End Date *</label>
+                    <input type="date" name="end_date" value="{{ current_date.strftime('%Y-%m-%d') }}" required class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-cyan-500">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Budget ({{ user.currency_symbol }}) *</label>
+                    <input type="number" step="0.01" min="0" name="budget" value="25000.00" required class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white font-bold text-sm focus:outline-none focus:border-cyan-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Status</label>
+                    <select name="status" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-cyan-500">
+                        <option value="active">Active / In Progress</option>
+                        <option value="planned">Planned</option>
+                        <option value="completed">Completed</option>
+                    </select>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-medium text-slate-300 mb-1">Notes / Description</label>
+                <textarea name="description" rows="2" placeholder="Flight details, hotel booking ref..." class="w-full px-3.5 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-cyan-500"></textarea>
+            </div>
+
+            <div class="pt-3 flex justify-end gap-2">
+                <button type="button" onclick="document.getElementById('new-trip-modal').classList.add('hidden')" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold">
+                    Cancel
+                </button>
+                <button type="submit" class="px-5 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold shadow-lg shadow-cyan-600/30">
+                    Create Trip
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

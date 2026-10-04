@@ -1,0 +1,273 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - FinMinimal{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Top Greeting & Time Period Selector -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <h2 class="text-2xl font-bold tracking-tight text-white">Hello, {{ user.full_name.split(' ')[0] }} 👋</h2>
+            <p class="text-xs sm:text-sm text-slate-400">Here is your financial summary for <span class="text-blue-400 font-semibold">{{ start_date.strftime('%d %b') }} – {{ end_date.strftime('%d %b %Y') }}</span></p>
+        </div>
+
+        <!-- Time Period Pills -->
+        <div class="flex items-center gap-1.5 p-1 bg-slate-900/90 rounded-2xl border border-slate-800 overflow-x-auto shrink-0">
+            <a href="/dashboard?period=this_month" class="px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all {% if period == 'this_month' %}bg-blue-600 text-white shadow-sm{% else %}text-slate-400 hover:text-white{% endif %}">
+                This Month
+            </a>
+            <a href="/dashboard?period=last_month" class="px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all {% if period == 'last_month' %}bg-blue-600 text-white shadow-sm{% else %}text-slate-400 hover:text-white{% endif %}">
+                Last Month
+            </a>
+            <a href="/dashboard?period=last_30_days" class="px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all {% if period == 'last_30_days' %}bg-blue-600 text-white shadow-sm{% else %}text-slate-400 hover:text-white{% endif %}">
+                30 Days
+            </a>
+            <a href="/dashboard?period=this_year" class="px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all {% if period == 'this_year' %}bg-blue-600 text-white shadow-sm{% else %}text-slate-400 hover:text-white{% endif %}">
+                This Year
+            </a>
+        </div>
+    </div>
+
+    <!-- Credit Card Billing & Due Date Alerts Banner (Requirement 5) -->
+    {% if due_card_alerts %}
+    <div class="space-y-2">
+        {% for alert in due_card_alerts %}
+        {% if alert.days_to_due <= 7 %}
+        <div class="p-3.5 rounded-2xl flex items-center justify-between gap-3 border {% if alert.urgency == 'danger' %}bg-rose-500/10 border-rose-500/30 text-rose-300{% else %}bg-amber-500/10 border-amber-500/30 text-amber-300{% endif %}">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-xl {% if alert.urgency == 'danger' %}bg-rose-500/20 text-rose-400{% else %}bg-amber-500/20 text-amber-400{% endif %} flex items-center justify-center shrink-0">
+                    <i class="fa-solid fa-credit-card text-sm"></i>
+                </div>
+                <div>
+                    <p class="text-xs font-bold text-white">Payment Reminder: {{ alert.card_name }} (••{{ alert.last_4 }})</p>
+                    <p class="text-[11px] opacity-90">{{ alert.status_text }} on <b>{{ alert.next_due_date.strftime('%d %B %Y') }}</b> (Bill: {{ alert.next_billing_date.strftime('%d %b') }})</p>
+                </div>
+            </div>
+            <a href="/accounts" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/80 hover:bg-slate-900 text-white shrink-0 border border-slate-700">
+                View Card
+            </a>
+        </div>
+        {% endif %}
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Top KPI Summary Cards -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
+        
+        <!-- Total Income -->
+        <div class="glass-card p-4 sm:p-5 rounded-2xl border border-slate-800 flex flex-col justify-between">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Income</span>
+                <div class="w-8 h-8 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-arrow-up-right"></i>
+                </div>
+            </div>
+            <div class="mt-3">
+                <h3 id="kpi-total-income" class="text-lg sm:text-2xl font-extrabold text-white tracking-tight">{{ user.currency_symbol }} {{ "%.2f"|format(total_income) }}</h3>
+                <span class="text-[11px] text-emerald-400 font-medium">Inflows recorded</span>
+            </div>
+        </div>
+
+        <!-- Total Expenses -->
+        <div class="glass-card p-4 sm:p-5 rounded-2xl border border-slate-800 flex flex-col justify-between">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Expenses</span>
+                <div class="w-8 h-8 rounded-xl bg-rose-500/15 text-rose-400 flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-arrow-down-left"></i>
+                </div>
+            </div>
+            <div class="mt-3">
+                <h3 id="kpi-total-expense" class="text-lg sm:text-2xl font-extrabold text-white tracking-tight">{{ user.currency_symbol }} {{ "%.2f"|format(total_expense) }}</h3>
+                <span class="text-[11px] text-rose-400 font-medium">Outflows recorded</span>
+            </div>
+        </div>
+
+        <!-- Net Savings -->
+        <div class="glass-card p-4 sm:p-5 rounded-2xl border border-slate-800 flex flex-col justify-between">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Net Savings</span>
+                <div class="w-8 h-8 rounded-xl {% if net_savings >= 0 %}bg-blue-500/15 text-blue-400{% else %}bg-rose-500/15 text-rose-400{% endif %} flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-piggy-bank"></i>
+                </div>
+            </div>
+            <div class="mt-3">
+                <h3 id="kpi-net-savings" class="text-lg sm:text-2xl font-extrabold {% if net_savings >= 0 %}text-emerald-400{% else %}text-rose-400{% endif %} tracking-tight">
+                    {{ user.currency_symbol }} {{ "%.2f"|format(net_savings) }}
+                </h3>
+                <span id="kpi-savings-rate" class="text-[11px] text-slate-400 font-medium">Savings Rate: {{ savings_rate }}%</span>
+            </div>
+        </div>
+
+        <!-- Bank Balance & Credit Util -->
+        <div class="glass-card p-4 sm:p-5 rounded-2xl border border-slate-800 flex flex-col justify-between">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Liquid Balance</span>
+                <div class="w-8 h-8 rounded-xl bg-indigo-500/15 text-indigo-400 flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-building-columns"></i>
+                </div>
+            </div>
+            <div class="mt-3">
+                <h3 class="text-lg sm:text-2xl font-extrabold text-white tracking-tight">{{ user.currency_symbol }} {{ "%.2f"|format(total_bank_balance) }}</h3>
+                <span class="text-[11px] text-slate-400 font-medium">Across {{ bank_accounts|length }} bank accounts</span>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Charts Section (Requirement 6) -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Category Doughnut Breakdown -->
+        <div class="glass-card rounded-2xl p-5 border border-slate-800 flex flex-col justify-between">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="font-bold text-sm text-white flex items-center gap-2">
+                    <i class="fa-solid fa-chart-pie text-blue-400"></i>
+                    <span>Expenses by Category</span>
+                </h3>
+                <a href="/categories" class="text-xs text-blue-400 hover:underline">Manage</a>
+            </div>
+            
+            <div class="relative flex-1 min-h-[240px] flex items-center justify-center">
+                <canvas id="categoryExpenseChart"></canvas>
+                <div id="no-cat-data-msg" class="text-center text-slate-500 text-xs hidden">
+                    <i class="fa-regular fa-folder-open text-2xl mb-1 block"></i>
+                    No expense data in this period
+                </div>
+            </div>
+        </div>
+
+        <!-- Cash Flow & Daily Trend Bar Chart -->
+        <div class="lg:col-span-2 glass-card rounded-2xl p-5 border border-slate-800 flex flex-col justify-between">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="font-bold text-sm text-white flex items-center gap-2">
+                    <i class="fa-solid fa-chart-simple text-emerald-400"></i>
+                    <span>Income vs Expense Activity</span>
+                </h3>
+                <span class="text-xs text-slate-400">{{ start_date.strftime('%b %Y') }}</span>
+            </div>
+            
+            <div class="relative flex-1 min-h-[240px]">
+                <canvas id="trendSpendingChart"></canvas>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Active Trips & Quick Widgets -->
+    {% if active_trips %}
+    <div class="space-y-3">
+        <div class="flex items-center justify-between">
+            <h3 class="font-bold text-sm text-white flex items-center gap-2">
+                <i class="fa-solid fa-plane-departure text-cyan-400"></i>
+                <span>Active Trips & Vacations</span>
+            </h3>
+            <a href="/trips" class="text-xs text-blue-400 hover:underline">View All Trips</a>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {% for trip in active_trips %}
+            {% set trip_spent = trip.transactions | selectattr('type', 'equalto', 'expense') | map(attribute='amount') | sum %}
+            {% set trip_pct = (trip_spent / trip.budget * 100) if trip.budget > 0 else 0 %}
+            <a href="/trips/{{ trip.id }}" class="glass-card p-4 rounded-2xl border border-slate-800 hover:border-slate-700 transition-all block group">
+                <div class="flex items-center justify-between">
+                    <h4 class="font-bold text-sm text-white group-hover:text-blue-400 transition-colors">{{ trip.name }}</h4>
+                    <span class="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">{{ trip.status }}</span>
+                </div>
+                <p class="text-xs text-slate-400 mt-0.5"><i class="fa-solid fa-location-dot text-[10px] mr-1 text-rose-400"></i>{{ trip.destination }} &bull; {{ trip.start_date.strftime('%d %b') }}</p>
+                <div class="mt-3">
+                    <div class="flex items-center justify-between text-xs mb-1">
+                        <span class="text-slate-400">Spent: <b class="text-white">{{ user.currency_symbol }}{{ "%.2f"|format(trip_spent) }}</b></span>
+                        <span class="text-slate-400">Budget: {{ user.currency_symbol }}{{ "%.2f"|format(trip.budget) }}</span>
+                    </div>
+                    <div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+                        <div class="h-2 rounded-full {% if trip_pct > 100 %}bg-rose-500{% elif trip_pct > 80 %}bg-amber-500{% else %}bg-cyan-500{% endif %}" style="width: {{ [trip_pct, 100]|min }}%"></div>
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Recent Transactions Table -->
+    <div class="glass-card rounded-2xl border border-slate-800 overflow-hidden">
+        <div class="p-4 sm:p-5 border-b border-slate-800 flex items-center justify-between">
+            <h3 class="font-bold text-base text-white flex items-center gap-2">
+                <i class="fa-solid fa-receipt text-blue-400"></i>
+                <span>Recent Transactions</span>
+            </h3>
+            <a href="/transactions" class="text-xs font-semibold text-blue-400 hover:underline flex items-center gap-1">
+                <span>View Full Log</span>
+                <i class="fa-solid fa-arrow-right text-[10px]"></i>
+            </a>
+        </div>
+
+        {% if recent_transactions %}
+        <div class="divide-y divide-slate-800/80">
+            {% for t in recent_transactions %}
+            <div class="p-3.5 sm:p-4 flex items-center justify-between hover:bg-slate-800/30 transition-colors">
+                <div class="flex items-center gap-3 min-w-0">
+                    <!-- Category Icon Badge -->
+                    <div class="w-10 h-10 rounded-2xl flex items-center justify-center text-lg shrink-0" style="background-color: {{ t.category.color if t.category else '#334155' }}20; color: {{ t.category.color if t.category else '#94A3B8' }};">
+                        <span>{{ t.category.icon if t.category else '📦' }}</span>
+                    </div>
+                    <div class="min-w-0">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <p class="font-semibold text-sm text-white truncate">{{ t.category.name if t.category else 'General' }}</p>
+                            {% if t.trip %}
+                            <span class="text-[10px] font-medium bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 px-2 py-0.2 rounded-full">
+                                ✈️ {{ t.trip.name }}
+                            </span>
+                            {% endif %}
+                            {% if t.tag %}
+                            <span class="text-[10px] text-slate-400 bg-slate-800 px-1.5 py-0.2 rounded">{{ t.tag }}</span>
+                            {% endif %}
+                        </div>
+                        <div class="flex items-center gap-2 text-xs text-slate-400 mt-0.5">
+                            <span>{{ t.date.strftime('%d %b %Y') }}</span>
+                            <span>&bull;</span>
+                            {% if t.bank_account %}
+                            <span>🏦 {{ t.bank_account.bank_name }} (••{{ t.bank_account.account_number_last4 }})</span>
+                            {% elif t.credit_card %}
+                            <span>💳 {{ t.credit_card.card_name }} (••{{ t.credit_card.last_4_digits }})</span>
+                            {% else %}
+                            <span>Cash / Direct</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Amount -->
+                <div class="text-right shrink-0 pl-3">
+                    <p class="font-bold text-sm sm:text-base {% if t.type == 'income' %}text-emerald-400{% else %}text-rose-400{% endif %}">
+                        {{ '+' if t.type == 'income' else '-' }} {{ user.currency_symbol }} {{ "%.2f"|format(t.amount) }}
+                    </p>
+                    {% if t.remarks %}
+                    <p class="text-[11px] text-slate-400 truncate max-w-[140px]">{{ t.remarks }}</p>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="p-8 text-center text-slate-400 text-xs">
+            <i class="fa-solid fa-receipt text-3xl mb-2 text-slate-600 block"></i>
+            <p>No transactions logged in this time period.</p>
+            <button onclick="openLogModal('expense')" class="mt-3 px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-semibold cursor-pointer">
+                Lodge First Expense
+            </button>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        loadDashboardCharts("{{ period }}", "{{ start_date.strftime('%Y-%m-%d') }}", "{{ end_date.strftime('%Y-%m-%d') }}");
+    });
+</script>
+{% endblock %}

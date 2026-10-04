@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>{% block title %}FinMinimal - Personal Finance{% endblock %}</title>
+
+    <!-- iOS & PWA Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="FinMinimal">
+    <meta name="theme-color" content="#0B0F19">
+    <meta name="format-detection" content="telephone=no">
+    <link rel="apple-touch-icon" href="/static/img/apple-touch-icon.png">
+    <link rel="manifest" href="/manifest.json">
+
+    <!-- Tailwind CSS & Lucide Icons & Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Custom Style Sheet -->
+    <link rel="stylesheet" href="/static/css/style.css">
+
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="bg-[#0B0F19] text-slate-100 min-h-screen flex flex-col selection:bg-blue-500 selection:text-white">
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none *:pointer-events-auto"></div>
+
+    {% if user %}
+    <div class="flex-1 flex flex-col lg:flex-row min-h-screen">
+        
+        <!-- Desktop Sidebar (Hidden on mobile) -->
+        <aside class="hidden lg:flex lg:flex-col w-64 bg-[#121826] border-r border-slate-800/80 p-5 shrink-0 justify-between">
+            <div class="space-y-6">
+                <!-- Brand Logo -->
+                <div class="flex items-center gap-3 px-2">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-emerald-500 flex items-center justify-center shadow-lg shadow-blue-500/20">
+                        <i class="fa-solid fa-wallet text-white text-lg"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-lg leading-tight tracking-tight text-white">FinMinimal</h1>
+                        <p class="text-xs text-slate-400">Personal Finance</p>
+                    </div>
+                </div>
+
+                <!-- Quick Log Button -->
+                <button onclick="openLogModal('expense')" class="w-full py-2.5 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-medium rounded-xl shadow-md shadow-blue-600/25 flex items-center justify-center gap-2 transition-all duration-150 touch-press cursor-pointer">
+                    <i class="fa-solid fa-plus text-sm"></i>
+                    <span>Lodge Transaction</span>
+                </button>
+
+                <!-- Navigation Links -->
+                <nav class="space-y-1.5 text-sm font-medium">
+                    <a href="/dashboard" class="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors {% if request.url.path == '/dashboard' or request.url.path == '/' %}bg-blue-600/15 text-blue-400 border border-blue-500/20 font-semibold{% else %}text-slate-400 hover:text-white hover:bg-slate-800/60{% endif %}">
+                        <i class="fa-solid fa-chart-pie w-5 text-center"></i>
+                        <span>Dashboard</span>
+                    </a>
+                    <a href="/transactions" class="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors {% if request.url.path.startswith('/transactions') %}bg-blue-600/15 text-blue-400 border border-blue-500/20 font-semibold{% else %}text-slate-400 hover:text-white hover:bg-slate-800/60{% endif %}">
+                        <i class="fa-solid fa-receipt w-5 text-center"></i>
+                        <span>Transactions</span>
+                    </a>
+                    <a href="/accounts" class="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors {% if request.url.path.startswith('/accounts') %}bg-blue-600/15 text-blue-400 border border-blue-500/20 font-semibold{% else %}text-slate-400 hover:text-white hover:bg-slate-800/60{% endif %}">
+                        <i class="fa-solid fa-credit-card w-5 text-center"></i>
+                        <span>Accounts & Cards</span>
+                    </a>
+                    <a href="/trips" class="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors {% if request.url.path.startswith('/trips') %}bg-blue-600/15 text-blue-400 border border-blue-500/20 font-semibold{% else %}text-slate-400 hover:text-white hover:bg-slate-800/60{% endif %}">
+                        <i class="fa-solid fa-plane-departure w-5 text-center"></i>
+                        <span>Trips & Events</span>
+                    </a>
+                    <a href="/categories" class="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors {% if request.url.path.startswith('/categories') %}bg-blue-600/15 text-blue-400 border border-blue-500/20 font-semibold{% else %}text-slate-400 hover:text-white hover:bg-slate-800/60{% endif %}">
+                        <i class="fa-solid fa-icons w-5 text-center"></i>
+                        <span>Categories</span>
+                    </a>
+                    <a href="/export" class="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors {% if request.url.path.startswith('/export') %}bg-blue-600/15 text-blue-400 border border-blue-500/20 font-semibold{% else %}text-slate-400 hover:text-white hover:bg-slate-800/60{% endif %}">
+                        <i class="fa-solid fa-file-arrow-down w-5 text-center"></i>
+                        <span>Export Statements</span>
+                    </a>
+                    <a href="/notifications" class="flex items-center justify-between px-3 py-2.5 rounded-xl transition-colors {% if request.url.path.startswith('/notifications') %}bg-blue-600/15 text-blue-400 border border-blue-500/20 font-semibold{% else %}text-slate-400 hover:text-white hover:bg-slate-800/60{% endif %}">
+                        <div class="flex items-center gap-3">
+                            <i class="fa-solid fa-bell w-5 text-center"></i>
+                            <span>Notifications</span>
+                        </div>
+                        <span id="notification-badge" class="hidden text-xs bg-rose-500 text-white font-bold px-2 py-0.5 rounded-full"></span>
+                    </a>
+
+                    {% if user.is_admin %}
+                    <div class="pt-3 border-t border-slate-800">
+                        <p class="px-3 text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Administration</p>
+                        <a href="/admin" class="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors {% if request.url.path.startswith('/admin') %}bg-amber-600/15 text-amber-400 border border-amber-500/20 font-semibold{% else %}text-amber-400/80 hover:text-amber-300 hover:bg-amber-950/30{% endif %}">
+                            <i class="fa-solid fa-shield-halved w-5 text-center"></i>
+                            <span>Admin Portal</span>
+                        </a>
+                    </div>
+                    {% endif %}
+                </nav>
+            </div>
+
+            <!-- Bottom User Card -->
+            <div class="pt-4 border-t border-slate-800/80">
+                <div class="flex items-center justify-between p-2 rounded-xl bg-slate-900/60 border border-slate-800">
+                    <a href="/profile" class="flex items-center gap-2.5 min-w-0 flex-1 hover:opacity-90">
+                        <div class="w-8 h-8 rounded-lg bg-indigo-600/30 text-indigo-400 border border-indigo-500/30 flex items-center justify-center font-bold text-xs uppercase shrink-0">
+                            {{ user.full_name[:2] }}
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <p class="text-xs font-semibold text-white truncate">{{ user.full_name }}</p>
+                            <p class="text-[11px] text-slate-400 truncate">{{ user.email }}</p>
+                        </div>
+                    </a>
+                    <a href="/logout" title="Log Out" class="p-1.5 text-slate-400 hover:text-rose-400 transition-colors">
+                        <i class="fa-solid fa-right-from-bracket text-sm"></i>
+                    </a>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <div class="flex-1 flex flex-col min-w-0">
+            
+            <!-- Top Bar -->
+            <header class="h-16 border-b border-slate-800/80 px-4 sm:px-6 flex items-center justify-between bg-[#121826]/70 backdrop-blur-md sticky top-0 z-30">
+                <!-- Mobile brand -->
+                <div class="flex items-center gap-2 lg:hidden">
+                    <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-blue-600 to-emerald-500 flex items-center justify-center shadow">
+                        <i class="fa-solid fa-wallet text-white text-sm"></i>
+                    </div>
+                    <span class="font-bold text-base text-white">FinMinimal</span>
+                </div>
+
+                <!-- Admin Date Override Banner (if active) -->
+                {% if is_simulated_date %}
+                <div class="flex items-center gap-2 px-3 py-1 bg-amber-500/15 border border-amber-500/30 rounded-full text-xs text-amber-400 font-medium">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                    <span>Simulated Date: <b>{{ current_date.strftime('%d %b %Y') }}</b></span>
+                    <a href="/admin" class="underline hover:text-white ml-1">Manage</a>
+                </div>
+                {% else %}
+                <div class="hidden sm:flex items-center gap-2 text-xs text-slate-400">
+                    <i class="fa-regular fa-calendar"></i>
+                    <span>{{ current_date.strftime('%A, %d %B %Y') }}</span>
+                </div>
+                {% endif %}
+
+                <!-- Top Right Actions -->
+                <div class="flex items-center gap-2.5">
+                    <!-- Enable Push Notification Button -->
+                    <button onclick="requestNotificationPermission()" title="Enable Due Date Notifications" class="p-2 text-slate-400 hover:text-blue-400 hover:bg-slate-800/80 rounded-xl transition-colors">
+                        <i class="fa-regular fa-bell"></i>
+                    </button>
+                    
+                    <!-- Quick Lodge Button (Mobile & Desktop) -->
+                    <button onclick="openLogModal('expense')" class="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors cursor-pointer">
+                        <i class="fa-solid fa-plus"></i>
+                        <span class="hidden sm:inline">Add Entry</span>
+                    </button>
+
+                    <!-- Mobile Profile Link -->
+                    <a href="/profile" class="lg:hidden w-8 h-8 rounded-lg bg-indigo-600/30 text-indigo-400 border border-indigo-500/30 flex items-center justify-center font-bold text-xs uppercase">
+                        {{ user.full_name[:2] }}
+                    </a>
+                </div>
+            </header>
+
+            <!-- Page Body -->
+            <main class="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+
+    </div>
+
+    <!-- Mobile iOS Bottom Navigation Bar (Thumb Friendly) -->
+    <nav class="lg:hidden fixed bottom-0 left-0 right-0 glass-nav z-40 px-2 py-2 flex items-center justify-around text-[10px] font-medium pb-safe">
+        <a href="/dashboard" class="flex flex-col items-center gap-1 py-1 px-2.5 rounded-lg {% if request.url.path == '/dashboard' or request.url.path == '/' %}text-blue-400 font-bold{% else %}text-slate-400 hover:text-slate-200{% endif %}">
+            <i class="fa-solid fa-chart-pie text-base"></i>
+            <span>Home</span>
+        </a>
+        <a href="/transactions" class="flex flex-col items-center gap-1 py-1 px-2.5 rounded-lg {% if request.url.path.startswith('/transactions') %}text-blue-400 font-bold{% else %}text-slate-400 hover:text-slate-200{% endif %}">
+            <i class="fa-solid fa-receipt text-base"></i>
+            <span>Log</span>
+        </a>
+        
+        <!-- Center Floating Action Button for Quick Expense -->
+        <button onclick="openLogModal('expense')" class="-mt-5 w-12 h-12 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-lg shadow-blue-500/40 border-2 border-[#0B0F19] touch-press cursor-pointer">
+            <i class="fa-solid fa-plus text-lg"></i>
+        </button>
+
+        <a href="/accounts" class="flex flex-col items-center gap-1 py-1 px-2.5 rounded-lg {% if request.url.path.startswith('/accounts') %}text-blue-400 font-bold{% else %}text-slate-400 hover:text-slate-200{% endif %}">
+            <i class="fa-solid fa-credit-card text-base"></i>
+            <span>Cards</span>
+        </a>
+        <a href="/trips" class="flex flex-col items-center gap-1 py-1 px-2.5 rounded-lg {% if request.url.path.startswith('/trips') %}text-blue-400 font-bold{% else %}text-slate-400 hover:text-slate-200{% endif %}">
+            <i class="fa-solid fa-plane-departure text-base"></i>
+            <span>Trips</span>
+        </a>
+    </nav>
+
+    <!-- Global Quick Transaction Modal / Bottom Sheet -->
+    {% include "transactions/log_modal.html" %}
+
+    {% else %}
+    <!-- Public / Auth Layout -->
+    <main class="flex-1 flex flex-col justify-center items-center p-4">
+        {% block auth_content %}{% endblock %}
+    </main>
+    {% endif %}
+
+    <!-- Core App JS -->
+    <script src="/static/js/app.js"></script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

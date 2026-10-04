@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Credit Card - FinMinimal{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto space-y-6">
+    <div class="flex items-center justify-between">
+        <div>
+            <h2 class="text-2xl font-bold tracking-tight text-white">Edit Credit Card</h2>
+            <p class="text-xs sm:text-sm text-slate-400">Update limits, billing cycles, or network details</p>
+        </div>
+        <a href="/accounts" class="text-xs text-slate-400 hover:text-white flex items-center gap-1.5">
+            <i class="fa-solid fa-arrow-left"></i>
+            <span>Back</span>
+        </a>
+    </div>
+
+    <div class="glass-card rounded-2xl p-6 border border-slate-800">
+        <form action="/accounts/card/{{ card.id }}/edit" method="POST" class="space-y-4">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="card_image_url" value="{{ card.card_image_url or '' }}">
+            <input type="hidden" name="card_color_gradient" value="{{ card.card_color_gradient }}">
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Bank Name *</label>
+                    <input type="text" name="bank_name" value="{{ card.bank_name }}" required class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-blue-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Card Name *</label>
+                    <input type="text" name="card_name" value="{{ card.card_name }}" required class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-blue-500">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Card Network *</label>
+                    <select name="card_network" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-blue-500">
+                        <option value="Visa" {% if card.card_network == 'Visa' %}selected{% endif %}>Visa</option>
+                        <option value="Mastercard" {% if card.card_network == 'Mastercard' %}selected{% endif %}>Mastercard</option>
+                        <option value="RuPay" {% if card.card_network == 'RuPay' %}selected{% endif %}>RuPay</option>
+                        <option value="Amex" {% if card.card_network == 'Amex' %}selected{% endif %}>American Express</option>
+                        <option value="Diners Club" {% if card.card_network == 'Diners Club' %}selected{% endif %}>Diners Club</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Last 4 Digits *</label>
+                    <input type="text" maxlength="4" pattern="\d{4}" name="last_4_digits" value="{{ card.last_4_digits }}" required class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-blue-500 font-mono">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Total Credit Limit ({{ user.currency_symbol }}) *</label>
+                    <input type="number" step="0.01" min="1" name="total_limit" value="{{ card.total_limit }}" required class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white font-bold text-sm focus:outline-none focus:border-blue-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Available Credit Limit ({{ user.currency_symbol }}) *</label>
+                    <input type="number" step="0.01" min="0" name="available_limit" value="{{ card.available_limit }}" required class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white font-bold text-sm focus:outline-none focus:border-blue-500">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-slate-900/60 rounded-xl border border-slate-800">
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Statement / Billing Day of Month *</label>
+                    <input type="number" min="1" max="31" name="billing_day" value="{{ card.billing_day }}" required class="w-full px-3.5 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-blue-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Payment Due Day of Month *</label>
+                    <input type="number" min="1" max="31" name="due_day" value="{{ card.due_day }}" required class="w-full px-3.5 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-blue-500">
+                </div>
+            </div>
+
+            <div class="pt-4 flex items-center justify-end gap-3">
+                <a href="/accounts" class="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold">
+                    Cancel
+                </a>
+                <button type="submit" class="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-lg shadow-blue-600/30 cursor-pointer">
+                    Save Changes
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

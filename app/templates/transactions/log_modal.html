@@ -1,0 +1,121 @@
+<!-- Quick Lodge Expense / Income Modal -->
+<div id="log-transaction-modal" class="fixed inset-0 z-50 hidden items-end sm:items-center justify-center p-0 sm:p-4 bg-black/70 backdrop-blur-sm transition-opacity">
+    <div class="w-full sm:max-w-lg bg-[#161F30] border border-slate-700/80 rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col transform transition-transform">
+        
+        <!-- Modal Header -->
+        <div class="px-5 py-4 border-b border-slate-800 flex items-center justify-between bg-[#121826]/80">
+            <div class="flex items-center gap-2">
+                <div class="w-7 h-7 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center">
+                    <i class="fa-solid fa-plus text-xs"></i>
+                </div>
+                <h3 class="font-bold text-base text-white">Record Transaction</h3>
+            </div>
+            <button onclick="closeLogModal()" class="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition-colors">
+                <i class="fa-solid fa-xmark text-sm"></i>
+            </button>
+        </div>
+
+        <!-- Modal Form Body -->
+        <form action="/transactions/new" method="POST" class="p-5 overflow-y-auto space-y-4">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+            <!-- Transaction Type Switcher (Expense / Income) -->
+            <div class="grid grid-cols-2 gap-2 p-1 bg-slate-900/80 rounded-xl border border-slate-800">
+                <label class="flex items-center justify-center gap-2 py-2 rounded-lg cursor-pointer text-xs font-semibold has-[:checked]:bg-rose-500/20 has-[:checked]:text-rose-400 has-[:checked]:border has-[:checked]:border-rose-500/30 text-slate-400 transition-all">
+                    <input type="radio" id="modal-type-expense" name="type" value="expense" checked onchange="onTransactionTypeChange('expense')" class="hidden">
+                    <i class="fa-solid fa-arrow-down-left text-xs"></i>
+                    <span>Expense</span>
+                </label>
+                <label class="flex items-center justify-center gap-2 py-2 rounded-lg cursor-pointer text-xs font-semibold has-[:checked]:bg-emerald-500/20 has-[:checked]:text-emerald-400 has-[:checked]:border has-[:checked]:border-emerald-500/30 text-slate-400 transition-all">
+                    <input type="radio" id="modal-type-income" name="type" value="income" onchange="onTransactionTypeChange('income')" class="hidden">
+                    <i class="fa-solid fa-arrow-up-right text-xs"></i>
+                    <span>Income</span>
+                </label>
+            </div>
+
+            <!-- Amount & Date -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Amount ({{ user.currency_symbol }}) *</label>
+                    <div class="relative">
+                        <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">{{ user.currency_symbol }}</span>
+                        <input type="number" step="0.01" min="0.01" id="modal-amount-input" name="amount" required placeholder="0.00" class="w-full pl-8 pr-3 py-2.5 bg-slate-900/80 border border-slate-700/80 rounded-xl text-white font-bold text-base focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 placeholder-slate-600">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Date *</label>
+                    <input type="date" name="date" value="{{ current_date.strftime('%Y-%m-%d') }}" required class="w-full px-3 py-2.5 bg-slate-900/80 border border-slate-700/80 rounded-xl text-white text-sm focus:outline-none focus:border-blue-500">
+                </div>
+            </div>
+
+            <!-- Category -->
+            <div>
+                <label class="block text-xs font-medium text-slate-400 mb-1">Category *</label>
+                <select id="modal-category-select" name="category_id" required class="w-full px-3 py-2.5 bg-slate-900/80 border border-slate-700/80 rounded-xl text-white text-sm focus:outline-none focus:border-blue-500">
+                    <option value="">Select Category</option>
+                    {% for cat in categories %}
+                    <option value="{{ cat.id }}" data-type="{{ cat.type }}">{{ cat.icon }} {{ cat.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Payment Source (Bank Account or Credit Card) -->
+            <div>
+                <label class="block text-xs font-medium text-slate-400 mb-1">Paid Via / Received In</label>
+                <select name="payment_source" class="w-full px-3 py-2.5 bg-slate-900/80 border border-slate-700/80 rounded-xl text-white text-sm focus:outline-none focus:border-blue-500">
+                    <option value="">None / Cash</option>
+                    
+                    {% if bank_accounts %}
+                    <optgroup label="🏦 Bank Accounts">
+                        {% for bank in bank_accounts %}
+                        <option value="bank:{{ bank.id }}">🏦 {{ bank.bank_name }} - {{ bank.account_name }} (••{{ bank.account_number_last4 }}) [Bal: {{ user.currency_symbol }}{{ "%.2f"|format(bank.current_balance) }}]</option>
+                        {% endfor %}
+                    </optgroup>
+                    {% endif %}
+
+                    {% if credit_cards %}
+                    <optgroup label="💳 Credit Cards">
+                        {% for card in credit_cards %}
+                        <option value="card:{{ card.id }}">💳 {{ card.bank_name }} {{ card.card_name }} (••{{ card.last_4_digits }}) [Avail: {{ user.currency_symbol }}{{ "%.2f"|format(card.available_limit) }}]</option>
+                        {% endfor %}
+                    </optgroup>
+                    {% endif %}
+                </select>
+            </div>
+
+            <!-- Trip Tagging (No duplicate work framework) -->
+            <div>
+                <label class="block text-xs font-medium text-slate-400 mb-1">
+                    <i class="fa-solid fa-plane-departure text-cyan-400 mr-1"></i> Link to Trip / Vacation (Optional)
+                </label>
+                <select name="trip_id" class="w-full px-3 py-2.5 bg-slate-900/80 border border-slate-700/80 rounded-xl text-white text-sm focus:outline-none focus:border-blue-500">
+                    <option value="">Not linked to a trip</option>
+                    {% for trip in active_trips if active_trips %}
+                    <option value="{{ trip.id }}">✈️ {{ trip.name }} ({{ trip.destination }})</option>
+                    {% endfor %}
+                </select>
+                <p class="text-[11px] text-slate-400 mt-1">Expenses tagged here automatically update the trip budget without extra logging.</p>
+            </div>
+
+            <!-- Tag & Remarks -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Tag (e.g. #dinner, #flight)</label>
+                    <input type="text" name="tag" placeholder="#personal" class="w-full px-3 py-2 bg-slate-900/80 border border-slate-700/80 rounded-xl text-white text-sm focus:outline-none focus:border-blue-500 placeholder-slate-600">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Remarks / Note</label>
+                    <input type="text" name="remarks" placeholder="Add details..." class="w-full px-3 py-2 bg-slate-900/80 border border-slate-700/80 rounded-xl text-white text-sm focus:outline-none focus:border-blue-500 placeholder-slate-600">
+                </div>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="pt-2">
+                <button type="submit" class="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold rounded-xl shadow-lg shadow-blue-600/30 flex items-center justify-center gap-2 transition-all cursor-pointer">
+                    <i class="fa-solid fa-check"></i>
+                    <span>Save Transaction</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Portal - FinMinimal{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <div>
+            <div class="flex items-center gap-2 mb-1">
+                <span class="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">Admin Control</span>
+                <span class="text-xs text-slate-400">Security & System Management</span>
+            </div>
+            <h2 class="text-2xl font-bold tracking-tight text-white">Administration Dashboard</h2>
+        </div>
+    </div>
+
+    <!-- 1. System Date Override & Simulation Box (Requirement 9) -->
+    <div class="glass-card rounded-3xl p-6 sm:p-8 border border-amber-500/30 bg-amber-950/10 shadow-xl space-y-5">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-amber-500/20 pb-4">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center text-lg shrink-0">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-base text-white">System Date Simulator & Override</h3>
+                    <p class="text-xs text-slate-400">Update/change application effective date on request for historical testing or simulated credit card cycles</p>
+                </div>
+            </div>
+
+            {% if is_simulated %}
+            <form action="/admin/reset-date" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button type="submit" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-amber-400 hover:text-amber-300 border border-amber-500/30 rounded-xl text-xs font-semibold cursor-pointer">
+                    <i class="fa-solid fa-rotate-left mr-1"></i> Reset to Real Date
+                </button>
+            </form>
+            {% endif %}
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+            <!-- Current Status -->
+            <div class="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-2">
+                <div class="flex items-center justify-between text-xs">
+                    <span class="text-slate-400">Current Effective App Date:</span>
+                    <span class="font-bold text-white text-sm {% if is_simulated %}text-amber-400{% endif %}">
+                        {{ current_date.strftime('%A, %d %B %Y') }}
+                    </span>
+                </div>
+                <div class="flex items-center justify-between text-xs text-slate-500">
+                    <span>Physical Server Date:</span>
+                    <span>{{ real_system_date.strftime('%d %B %Y') }}</span>
+                </div>
+                <div class="pt-2 text-[11px] {% if is_simulated %}text-amber-400{% else %}text-emerald-400{% endif %} font-medium">
+                    {% if is_simulated %}
+                    ● Date is currently OVERRIDDEN by Administrator
+                    {% else %}
+                    ● Running in Real-Time Clock Mode
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Set Target Date Form -->
+            <form action="/admin/date-override" method="POST" class="flex flex-col sm:flex-row gap-3">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <div class="flex-1">
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Set New Simulated Date</label>
+                    <input type="date" name="target_date" value="{{ current_date.strftime('%Y-%m-%d') }}" required class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-amber-500">
+                </div>
+                <div class="sm:self-end">
+                    <button type="submit" class="w-full sm:w-auto py-2.5 px-5 bg-amber-600 hover:bg-amber-500 text-white font-semibold rounded-xl text-xs shadow-lg shadow-amber-600/30 cursor-pointer">
+                        Update Date
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 2. System Metrics -->
+    <div class="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
+        <div class="glass-card p-4 rounded-2xl border border-slate-800">
+            <span class="text-[11px] uppercase tracking-wider text-slate-400 font-semibold block">Total Users</span>
+            <span class="text-xl font-black text-white mt-1 block">{{ total_users }}</span>
+        </div>
+        <div class="glass-card p-4 rounded-2xl border border-slate-800">
+            <span class="text-[11px] uppercase tracking-wider text-slate-400 font-semibold block">Total Transactions</span>
+            <span class="text-xl font-black text-white mt-1 block">{{ total_txns }}</span>
+        </div>
+        <div class="glass-card p-4 rounded-2xl border border-slate-800">
+            <span class="text-[11px] uppercase tracking-wider text-slate-400 font-semibold block">Bank Accounts</span>
+            <span class="text-xl font-black text-white mt-1 block">{{ total_bank_accounts }}</span>
+        </div>
+        <div class="glass-card p-4 rounded-2xl border border-slate-800">
+            <span class="text-[11px] uppercase tracking-wider text-slate-400 font-semibold block">Credit Cards</span>
+            <span class="text-xl font-black text-white mt-1 block">{{ total_credit_cards }}</span>
+        </div>
+        <div class="glass-card p-4 rounded-2xl border border-slate-800">
+            <span class="text-[11px] uppercase tracking-wider text-slate-400 font-semibold block">Active Trips</span>
+            <span class="text-xl font-black text-white mt-1 block">{{ total_trips }}</span>
+        </div>
+    </div>
+
+    <!-- 3. User Management Table -->
+    <div class="glass-card rounded-2xl border border-slate-800 overflow-hidden">
+        <div class="p-4 border-b border-slate-800">
+            <h3 class="font-bold text-base text-white flex items-center gap-2">
+                <i class="fa-solid fa-users text-blue-400"></i>
+                <span>Registered Users</span>
+            </h3>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs text-slate-300">
+                <thead class="bg-slate-900/80 text-slate-400 uppercase font-semibold border-b border-slate-800">
+                    <tr>
+                        <th class="p-3.5">User</th>
+                        <th class="p-3.5">Role</th>
+                        <th class="p-3.5">Status</th>
+                        <th class="p-3.5">Joined</th>
+                        <th class="p-3.5 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-800/60">
+                    {% for u in users %}
+                    <tr class="hover:bg-slate-800/30">
+                        <td class="p-3.5">
+                            <p class="font-bold text-white">{{ u.full_name }}</p>
+                            <p class="text-[11px] text-slate-500 font-mono">{{ u.email }}</p>
+                        </td>
+                        <td class="p-3.5">
+                            <span class="px-2 py-0.5 rounded text-[10px] font-bold {% if u.is_admin %}bg-amber-500/20 text-amber-300 border border-amber-500/30{% else %}bg-slate-800 text-slate-300{% endif %}">
+                                {{ 'Administrator' if u.is_admin else 'User' }}
+                            </span>
+                        </td>
+                        <td class="p-3.5">
+                            <span class="px-2 py-0.5 rounded text-[10px] font-bold {% if u.is_active %}bg-emerald-500/20 text-emerald-400{% else %}bg-rose-500/20 text-rose-400{% endif %}">
+                                {{ 'Active' if u.is_active else 'Deactivated' }}
+                            </span>
+                        </td>
+                        <td class="p-3.5 text-slate-400">{{ u.created_at.strftime('%d %b %Y') }}</td>
+                        <td class="p-3.5 text-right">
+                            {% if u.id != user.id %}
+                            <form action="/admin/users/{{ u.id }}/toggle-status" method="POST" class="inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                <button type="submit" class="px-2.5 py-1 rounded-lg text-[11px] font-medium {% if u.is_active %}bg-rose-500/20 text-rose-300 hover:bg-rose-500/30{% else %}bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30{% endif %} cursor-pointer">
+                                    {{ 'Deactivate' if u.is_active else 'Activate' }}
+                                </button>
+                            </form>
+                            {% else %}
+                            <span class="text-slate-500 italic">Self</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 4. Security Audit Logs -->
+    <div class="glass-card rounded-2xl border border-slate-800 overflow-hidden">
+        <div class="p-4 border-b border-slate-800">
+            <h3 class="font-bold text-base text-white flex items-center gap-2">
+                <i class="fa-solid fa-shield-halved text-emerald-400"></i>
+                <span>Recent Security & Audit Logs</span>
+            </h3>
+        </div>
+        <div class="divide-y divide-slate-800/60 max-h-72 overflow-y-auto">
+            {% for a in recent_audits %}
+            <div class="p-3.5 text-xs flex items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                    <span class="font-mono text-[10px] px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-blue-400 font-bold">{{ a.action }}</span>
+                    <span class="text-slate-300">{{ a.details or '—' }}</span>
+                </div>
+                <div class="text-slate-500 text-[11px] shrink-0 font-mono">
+                    <span>IP: {{ a.ip_address or '127.0.0.1' }}</span> &bull; 
+                    <span>{{ a.created_at.strftime('%d %b %H:%M:%S') }}</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}

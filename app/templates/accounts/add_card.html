@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+
+{% block title %}Add Credit Card - FinMinimal{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto space-y-6">
+    <div class="flex items-center justify-between">
+        <div>
+            <h2 class="text-2xl font-bold tracking-tight text-white">Add Credit Card</h2>
+            <p class="text-xs sm:text-sm text-slate-400">Select a major Indian credit card preset or configure a custom card</p>
+        </div>
+        <a href="/accounts" class="text-xs text-slate-400 hover:text-white flex items-center gap-1.5">
+            <i class="fa-solid fa-arrow-left"></i>
+            <span>Back</span>
+        </a>
+    </div>
+
+    <!-- Live Credit Card Preview (Apple Wallet Style) -->
+    <div class="flex justify-center my-2">
+        <div id="card-live-preview" class="credit-card-item rounded-3xl p-6 flex flex-col justify-between w-full max-w-md min-h-[220px] text-white border border-white/10 shadow-2xl" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);">
+            
+            <div class="flex items-start justify-between">
+                <div>
+                    <span id="preview-bank" class="text-[11px] uppercase tracking-widest text-white/70 font-semibold block">Bank Name</span>
+                    <h4 id="preview-name" class="font-extrabold text-base tracking-tight text-white mt-0.5">Card Name</h4>
+                </div>
+                <div class="flex items-center gap-2">
+                    <img id="preview-img" src="" alt="" class="h-9 w-14 object-contain rounded-md drop-shadow hidden">
+                    <div class="card-chip"></div>
+                </div>
+            </div>
+
+            <div class="my-4">
+                <div class="flex items-center justify-between text-xs text-white/80 font-mono mb-2">
+                    <span id="preview-last4">•••• •••• •••• 1234</span>
+                    <span id="preview-network" class="font-sans text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-white/10">VISA</span>
+                </div>
+                <div class="flex items-baseline justify-between">
+                    <div>
+                        <span class="text-[10px] uppercase tracking-wider text-white/60 block font-sans">Available Limit</span>
+                        <span id="preview-avail" class="text-xl font-black font-sans text-white">{{ user.currency_symbol }} 1,50,000.00</span>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-[10px] uppercase tracking-wider text-white/60 block font-sans">Total Limit</span>
+                        <span id="preview-total" class="text-xs font-bold font-sans text-white/80">{{ user.currency_symbol }} 1,50,000.00</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pt-2 border-t border-white/10 flex items-center justify-between text-[11px]">
+                <span>Bill Cycle: <b id="preview-billing">15th</b></span>
+                <span>Due Date: <b id="preview-due">5th</b></span>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Popular Presets Gallery -->
+    <div class="glass-card rounded-2xl p-5 border border-slate-800">
+        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Popular Major Indian Credit Cards (Click to auto-fill)</label>
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-h-56 overflow-y-auto pr-1">
+            {% for c in card_presets %}
+            <button type="button" onclick="selectCardPreset({{ loop.index0 }})" class="p-2.5 rounded-xl border border-slate-800 hover:border-indigo-500/50 bg-slate-900/60 hover:bg-slate-800 text-left transition-all flex items-center gap-2.5 group cursor-pointer">
+                {% if c.image_url %}
+                <img src="{{ c.image_url }}" alt="" class="w-7 h-5 object-contain rounded shrink-0" onerror="this.style.display='none'">
+                {% endif %}
+                <div class="min-w-0">
+                    <p class="text-xs font-bold text-slate-300 group-hover:text-white truncate">{{ c.card_name }}</p>
+                    <p class="text-[10px] text-slate-500 truncate">{{ c.bank_name }} &bull; {{ c.card_network }}</p>
+                </div>
+            </button>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Card Form -->
+    <div class="glass-card rounded-2xl p-6 border border-slate-800">
+        <form action="/accounts/card/new" method="POST" class="space-y-4">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" id="card_image_url_input" name="card_image_url" value="">
+            <input type="hidden" id="card_gradient_input" name="card_color_gradient" value="linear-gradient(135deg, #1e293b 0%, #0f172a 100%)">
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Bank Name *</label>
+                    <input type="text" id="bank_name_input" name="bank_name" required placeholder="e.g. HDFC Bank" oninput="updateCardPreview()" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-blue-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Card Name *</label>
+                    <input type="text" id="card_name_input" name="card_name" required placeholder="e.g. Regalia Gold / Amazon Pay" oninput="updateCardPreview()" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-blue-500">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Card Network *</label>
+                    <select id="card_network_input" name="card_network" onchange="updateCardPreview()" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-blue-500">
+                        <option value="Visa">Visa</option>
+                        <option value="Mastercard">Mastercard</option>
+                        <option value="RuPay">RuPay</option>
+                        <option value="Amex">American Express</option>
+                        <option value="Diners Club">Diners Club</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Last 4 Digits of Card *</label>
+                    <input type="text" maxlength="4" pattern="\d{4}" id="last_4_input" name="last_4_digits" required placeholder="e.g. 4321" oninput="updateCardPreview()" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-blue-500 font-mono">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Total Credit Limit ({{ user.currency_symbol }}) *</label>
+                    <input type="number" step="0.01" min="1" id="total_limit_input" name="total_limit" value="150000.00" required oninput="updateCardPreview()" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white font-bold text-sm focus:outline-none focus:border-blue-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Opening / Available Limit ({{ user.currency_symbol }}) *</label>
+                    <input type="number" step="0.01" min="0" id="opening_limit_input" name="opening_limit" value="150000.00" required oninput="updateCardPreview()" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white font-bold text-sm focus:outline-none focus:border-blue-500">
+                </div>
+            </div>
+
+            <!-- Billing & Payment Due Cycles (Requirement 4 & 5) -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-slate-900/60 rounded-xl border border-slate-800">
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">
+                        <i class="fa-regular fa-calendar text-blue-400 mr-1"></i> Statement / Billing Day of Month *
+                    </label>
+                    <input type="number" min="1" max="31" id="billing_day_input" name="billing_day" value="15" required oninput="updateCardPreview()" class="w-full px-3.5 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-blue-500">
+                    <span class="text-[11px] text-slate-400 mt-0.5 block">e.g. 15th of every month</span>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">
+                        <i class="fa-regular fa-calendar-check text-rose-400 mr-1"></i> Payment Due Day of Month *
+                    </label>
+                    <input type="number" min="1" max="31" id="due_day_input" name="due_day" value="5" required oninput="updateCardPreview()" class="w-full px-3.5 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-blue-500">
+                    <span class="text-[11px] text-slate-400 mt-0.5 block">e.g. 5th of every month</span>
+                </div>
+            </div>
+
+            <div class="pt-4 flex items-center justify-end gap-3">
+                <a href="/accounts" class="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold">
+                    Cancel
+                </a>
+                <button type="submit" class="px-6 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-semibold shadow-lg shadow-indigo-600/30 cursor-pointer">
+                    Save Credit Card
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    const presets = {{ card_presets|tojson }};
+
+    function selectCardPreset(index) {
+        const item = presets[index];
+        if (!item) return;
+
+        document.getElementById('bank_name_input').value = item.bank_name;
+        document.getElementById('card_name_input').value = item.card_name;
+        document.getElementById('card_network_input').value = item.card_network;
+        document.getElementById('total_limit_input').value = item.default_limit || 150000;
+        document.getElementById('opening_limit_input').value = item.default_limit || 150000;
+        document.getElementById('card_image_url_input').value = item.image_url || '';
+        document.getElementById('card_gradient_input').value = item.gradient || 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)';
+
+        updateCardPreview();
+    }
+
+    function updateCardPreview() {
+        const bank = document.getElementById('bank_name_input').value || 'Bank Name';
+        const name = document.getElementById('card_name_input').value || 'Card Name';
+        const network = document.getElementById('card_network_input').value || 'VISA';
+        const last4 = document.getElementById('last_4_input').value || '1234';
+        const total = document.getElementById('total_limit_input').value || '0';
+        const avail = document.getElementById('opening_limit_input').value || '0';
+        const imgUrl = document.getElementById('card_image_url_input').value;
+        const gradient = document.getElementById('card_gradient_input').value;
+        const billing = document.getElementById('billing_day_input').value || '15';
+        const due = document.getElementById('due_day_input').value || '5';
+
+        document.getElementById('preview-bank').textContent = bank;
+        document.getElementById('preview-name').textContent = name;
+        document.getElementById('preview-network').textContent = network;
+        document.getElementById('preview-last4').textContent = `•••• •••• •••• ${last4}`;
+        document.getElementById('preview-avail').textContent = `{{ user.currency_symbol }} ${Number(avail).toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
+        document.getElementById('preview-total').textContent = `{{ user.currency_symbol }} ${Number(total).toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
+        document.getElementById('preview-billing').textContent = `${billing}th`;
+        document.getElementById('preview-due').textContent = `${due}th`;
+
+        const cardPreview = document.getElementById('card-live-preview');
+        cardPreview.style.background = gradient;
+
+        const imgEl = document.getElementById('preview-img');
+        if (imgUrl) {
+            imgEl.src = imgUrl;
+            imgEl.classList.remove('hidden');
+        } else {
+            imgEl.classList.add('hidden');
+        }
+    }
+</script>
+{% endblock %}

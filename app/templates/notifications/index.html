@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block title %}Notifications - FinMinimal{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto space-y-6">
+
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h2 class="text-2xl font-bold tracking-tight text-white">Notifications & Alerts</h2>
+            <p class="text-xs sm:text-sm text-slate-400">Credit card payment due reminders, billing cycle alerts, and system notices</p>
+        </div>
+        <div class="flex items-center gap-2">
+            <button onclick="markAllNotificationsRead()" class="py-2 px-3.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold border border-slate-700 cursor-pointer">
+                Mark All as Read
+            </button>
+        </div>
+    </div>
+
+    <!-- Push Notification Promo Card -->
+    <div class="glass-card rounded-2xl p-5 border border-blue-500/30 bg-blue-950/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div class="flex items-center gap-3.5">
+            <div class="w-11 h-11 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center text-xl shrink-0">
+                <i class="fa-solid fa-bell-ring"></i>
+            </div>
+            <div>
+                <h3 class="font-bold text-sm text-white">Credit Card Due Date Push Notifications</h3>
+                <p class="text-xs text-slate-300 mt-0.5">Receive native push alerts on your iPhone or browser before your bill due date.</p>
+            </div>
+        </div>
+        <button onclick="requestNotificationPermission()" class="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold shrink-0 cursor-pointer shadow-md shadow-blue-600/30">
+            Enable Alerts
+        </button>
+    </div>
+
+    <!-- Notifications List -->
+    <div class="glass-card rounded-2xl border border-slate-800 overflow-hidden">
+        {% if notifications %}
+        <div class="divide-y divide-slate-800/80">
+            {% for n in notifications %}
+            <div id="notif-row-{{ n.id }}" class="p-4 sm:p-5 flex items-start justify-between gap-3 {% if not n.is_read %}bg-blue-500/5{% endif %} hover:bg-slate-800/30 transition-colors">
+                <div class="flex items-start gap-3.5 min-w-0">
+                    <div class="w-9 h-9 rounded-xl flex items-center justify-center text-sm shrink-0 mt-0.5 {% if n.type == 'due_date' %}bg-rose-500/20 text-rose-400{% elif n.type == 'billing_date' %}bg-amber-500/20 text-amber-400{% else %}bg-blue-500/20 text-blue-400{% endif %}">
+                        {% if n.type == 'due_date' %}
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                        {% elif n.type == 'billing_date' %}
+                        <i class="fa-regular fa-file-invoice"></i>
+                        {% else %}
+                        <i class="fa-solid fa-bell"></i>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h4 class="font-bold text-sm text-white">{{ n.title }}</h4>
+                            {% if not n.is_read %}
+                            <span class="w-2 h-2 rounded-full bg-blue-500 shrink-0"></span>
+                            {% endif %}
+                        </div>
+                        <p class="text-xs text-slate-300 mt-1 leading-relaxed">{{ n.message }}</p>
+                        <span class="text-[11px] text-slate-500 mt-2 block">{{ n.created_at.strftime('%d %B %Y, %I:%M %p') }}</span>
+                    </div>
+                </div>
+
+                {% if not n.is_read %}
+                <button onclick="markNotificationRead({{ n.id }})" class="p-1.5 text-slate-400 hover:text-white text-xs shrink-0 cursor-pointer" title="Dismiss / Mark Read">
+                    <i class="fa-solid fa-check"></i>
+                </button>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="p-12 text-center text-slate-400 text-xs">
+            <i class="fa-regular fa-bell-slash text-3xl mb-2 text-slate-600 block"></i>
+            <p>No notifications yet. You're all caught up!</p>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    async function markNotificationRead(id) {
+        const res = await fetch(`/api/notifications/mark-read/${id}`, { method: 'POST' });
+        if (res.ok) {
+            const row = document.getElementById(`notif-row-${id}`);
+            if (row) row.classList.remove('bg-blue-500/5');
+            updateNotificationBadge();
+        }
+    }
+
+    async function markAllNotificationsRead() {
+        const res = await fetch('/api/notifications/mark-all-read', { method: 'POST' });
+        if (res.ok) {
+            window.location.reload();
+        }
+    }
+</script>
+{% endblock %}

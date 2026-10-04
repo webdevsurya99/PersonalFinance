@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+
+{% block title %}Accounts & Credit Cards - FinMinimal{% endblock %}
+
+{% block content %}
+<div class="space-y-8">
+
+    <!-- Header & Quick Actions -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <h2 class="text-2xl font-bold tracking-tight text-white">Accounts & Cards</h2>
+            <p class="text-xs sm:text-sm text-slate-400">Manage your liquid bank accounts and track credit card billing & due cycles</p>
+        </div>
+        <div class="flex items-center gap-2">
+            <a href="/accounts/bank/new" class="py-2.5 px-3.5 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 border border-blue-500/30 font-semibold rounded-xl text-xs flex items-center gap-1.5 transition-all">
+                <i class="fa-solid fa-plus"></i>
+                <span>Add Bank Account</span>
+            </a>
+            <a href="/accounts/card/new" class="py-2.5 px-3.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-semibold rounded-xl text-xs flex items-center gap-1.5 shadow-lg shadow-indigo-600/25 transition-all">
+                <i class="fa-solid fa-credit-card"></i>
+                <span>Add Credit Card</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- 1. Credit Cards Section (Apple Wallet Visual Carousel) -->
+    <div class="space-y-4">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-xl bg-purple-500/15 text-purple-400 flex items-center justify-center">
+                    <i class="fa-solid fa-credit-card text-sm"></i>
+                </div>
+                <h3 class="font-bold text-lg text-white">Credit Cards</h3>
+            </div>
+            <span class="text-xs text-slate-400 font-medium">{{ cards_with_meta|length }} Cards active</span>
+        </div>
+
+        {% if cards_with_meta %}
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {% for item in cards_with_meta %}
+            {% set card = item.card %}
+            {% set dates = item.dates %}
+            
+            <div class="credit-card-item rounded-3xl p-6 flex flex-col justify-between min-h-[220px] text-white border border-white/10" style="background: {{ card.card_color_gradient or 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)' }};">
+                
+                <!-- Card Top: Bank & Network -->
+                <div class="flex items-start justify-between">
+                    <div>
+                        <span class="text-[11px] uppercase tracking-widest text-white/70 font-semibold block">{{ card.bank_name }}</span>
+                        <h4 class="font-extrabold text-base tracking-tight text-white mt-0.5">{{ card.card_name }}</h4>
+                    </div>
+
+                    <!-- Online Card Image or Chip -->
+                    <div class="flex items-center gap-2">
+                        {% if card.card_image_url %}
+                        <img src="{{ card.card_image_url }}" alt="{{ card.card_name }}" class="h-9 w-14 object-contain rounded-md drop-shadow" onerror="this.style.display='none'">
+                        {% endif %}
+                        <div class="card-chip"></div>
+                    </div>
+                </div>
+
+                <!-- Card Middle: Last 4 & Balance -->
+                <div class="my-4">
+                    <div class="flex items-center justify-between text-xs text-white/80 font-mono mb-2">
+                        <span>•••• •••• •••• {{ card.last_4_digits }}</span>
+                        <span class="font-sans text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-white/10">{{ card.card_network }}</span>
+                    </div>
+
+                    <!-- Limits -->
+                    <div class="flex items-baseline justify-between">
+                        <div>
+                            <span class="text-[10px] uppercase tracking-wider text-white/60 block font-sans">Available Limit</span>
+                            <span class="text-xl font-black font-sans text-white">{{ user.currency_symbol }} {{ "%.2f"|format(card.available_limit) }}</span>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-[10px] uppercase tracking-wider text-white/60 block font-sans">Total Limit</span>
+                            <span class="text-xs font-bold font-sans text-white/80">{{ user.currency_symbol }} {{ "%.2f"|format(card.total_limit) }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Utilization Gauge -->
+                    <div class="w-full bg-black/40 rounded-full h-1.5 mt-2 overflow-hidden">
+                        <div class="h-1.5 rounded-full {% if item.utilization_pct > 70 %}bg-rose-400{% elif item.utilization_pct > 30 %}bg-amber-400{% else %}bg-emerald-400{% endif %}" style="width: {{ [item.utilization_pct, 100]|min }}%"></div>
+                    </div>
+                </div>
+
+                <!-- Card Bottom: Billing & Due Reminders (Requirement 5) -->
+                <div class="pt-3 border-t border-white/10 flex items-center justify-between text-[11px]">
+                    <div class="flex items-center gap-1.5">
+                        <i class="fa-regular fa-calendar-check text-white/70"></i>
+                        <span>Due: <b>{{ dates.next_due_date.strftime('%d %b') }}</b> ({{ dates.status_text }})</span>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <a href="/accounts/card/{{ card.id }}/edit" class="hover:text-amber-300 text-white/80 p-1" title="Edit Card">
+                            <i class="fa-regular fa-pen-to-square"></i>
+                        </a>
+                        <form action="/accounts/card/{{ card.id }}/delete" method="POST" onsubmit="return confirm('Remove this card?')">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                            <button type="submit" class="hover:text-rose-300 text-white/80 p-1 cursor-pointer" title="Delete Card">
+                                <i class="fa-regular fa-trash-can"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="glass-card rounded-2xl p-8 text-center text-slate-400 border border-slate-800">
+            <i class="fa-solid fa-credit-card text-3xl text-slate-600 mb-2 block"></i>
+            <p class="text-sm font-semibold text-slate-300">No Credit Cards added yet</p>
+            <p class="text-xs text-slate-500 mt-1">Add your Indian credit cards to track billing cycles, payment due dates, and limit usage.</p>
+            <a href="/accounts/card/new" class="inline-block mt-4 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl text-xs">
+                Add Credit Card Preset
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- 2. Bank Accounts Section -->
+    <div class="space-y-4 pt-4">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-xl bg-blue-500/15 text-blue-400 flex items-center justify-center">
+                    <i class="fa-solid fa-building-columns text-sm"></i>
+                </div>
+                <h3 class="font-bold text-lg text-white">Bank Accounts</h3>
+            </div>
+            <span class="text-xs text-slate-400 font-medium">{{ bank_accounts|length }} Accounts active</span>
+        </div>
+
+        {% if bank_accounts %}
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {% for bank in bank_accounts %}
+            <div class="glass-card rounded-2xl p-5 border border-slate-800 flex flex-col justify-between hover:border-slate-700 transition-all">
+                <div class="flex items-start justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-white text-sm" style="background-color: {{ bank.color }};">
+                            <i class="fa-solid fa-building-columns"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-sm text-white">{{ bank.bank_name }}</h4>
+                            <p class="text-xs text-slate-400">{{ bank.account_name }} &bull; A/C ••{{ bank.account_number_last4 }}</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-1 text-xs">
+                        <a href="/accounts/bank/{{ bank.id }}/edit" class="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800" title="Edit Bank">
+                            <i class="fa-regular fa-pen-to-square"></i>
+                        </a>
+                        <form action="/accounts/bank/{{ bank.id }}/delete" method="POST" onsubmit="return confirm('Remove this bank account?')">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                            <button type="submit" class="p-1.5 text-slate-400 hover:text-rose-400 rounded-lg hover:bg-slate-800 cursor-pointer" title="Delete Bank">
+                                <i class="fa-regular fa-trash-can"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="mt-4 pt-4 border-t border-slate-800/80 flex items-baseline justify-between">
+                    <span class="text-xs text-slate-400 font-medium">Current Balance</span>
+                    <span class="text-lg font-extrabold text-white">{{ user.currency_symbol }} {{ "%.2f"|format(bank.current_balance) }}</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="glass-card rounded-2xl p-8 text-center text-slate-400 border border-slate-800">
+            <i class="fa-solid fa-building-columns text-3xl text-slate-600 mb-2 block"></i>
+            <p class="text-sm font-semibold text-slate-300">No Bank Accounts linked</p>
+            <p class="text-xs text-slate-500 mt-1">Add your Indian bank accounts (HDFC, SBI, ICICI, Axis, Kotak, etc.) to track your cash liquidity.</p>
+            <a href="/accounts/bank/new" class="inline-block mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl text-xs">
+                Add Bank Account
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}

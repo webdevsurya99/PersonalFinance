@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Transaction - FinMinimal{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto space-y-6">
+    <div class="flex items-center justify-between">
+        <div>
+            <h2 class="text-2xl font-bold tracking-tight text-white">Edit Transaction</h2>
+            <p class="text-xs sm:text-sm text-slate-400">Modify transaction details and adjust account balance</p>
+        </div>
+        <a href="/transactions" class="text-xs text-slate-400 hover:text-white flex items-center gap-1.5">
+            <i class="fa-solid fa-arrow-left"></i>
+            <span>Back to List</span>
+        </a>
+    </div>
+
+    <div class="glass-card rounded-2xl p-6 border border-slate-800">
+        <form action="/transactions/{{ txn.id }}/edit" method="POST" class="space-y-4">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+            <!-- Type -->
+            <div class="grid grid-cols-2 gap-2 p-1 bg-slate-900 rounded-xl border border-slate-800">
+                <label class="flex items-center justify-center gap-2 py-2 rounded-lg cursor-pointer text-xs font-semibold has-[:checked]:bg-rose-500/20 has-[:checked]:text-rose-400 text-slate-400">
+                    <input type="radio" name="type" value="expense" {% if txn.type == 'expense' %}checked{% endif %} class="hidden">
+                    <span>Expense</span>
+                </label>
+                <label class="flex items-center justify-center gap-2 py-2 rounded-lg cursor-pointer text-xs font-semibold has-[:checked]:bg-emerald-500/20 has-[:checked]:text-emerald-400 text-slate-400">
+                    <input type="radio" name="type" value="income" {% if txn.type == 'income' %}checked{% endif %} class="hidden">
+                    <span>Income</span>
+                </label>
+            </div>
+
+            <!-- Amount & Date -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Amount ({{ user.currency_symbol }}) *</label>
+                    <input type="number" step="0.01" min="0.01" name="amount" value="{{ txn.amount }}" required class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white font-bold text-base focus:outline-none focus:border-blue-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Date *</label>
+                    <input type="date" name="date" value="{{ txn.date.strftime('%Y-%m-%d') }}" required class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-blue-500">
+                </div>
+            </div>
+
+            <!-- Category -->
+            <div>
+                <label class="block text-xs font-medium text-slate-400 mb-1">Category *</label>
+                <select name="category_id" required class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-blue-500">
+                    {% for cat in categories %}
+                    <option value="{{ cat.id }}" {% if txn.category_id == cat.id %}selected{% endif %}>{{ cat.icon }} {{ cat.name }} ({{ cat.type }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Payment Source -->
+            <div>
+                <label class="block text-xs font-medium text-slate-400 mb-1">Payment Method / Account</label>
+                <select name="payment_source" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-blue-500">
+                    <option value="">None / Cash</option>
+                    {% if bank_accounts %}
+                    <optgroup label="🏦 Bank Accounts">
+                        {% for bank in bank_accounts %}
+                        <option value="bank:{{ bank.id }}" {% if txn.bank_account_id == bank.id %}selected{% endif %}>🏦 {{ bank.bank_name }} - {{ bank.account_name }} (••{{ bank.account_number_last4 }})</option>
+                        {% endfor %}
+                    </optgroup>
+                    {% endif %}
+                    {% if credit_cards %}
+                    <optgroup label="💳 Credit Cards">
+                        {% for card in credit_cards %}
+                        <option value="card:{{ card.id }}" {% if txn.credit_card_id == card.id %}selected{% endif %}>💳 {{ card.bank_name }} {{ card.card_name }} (••{{ card.last_4_digits }})</option>
+                        {% endfor %}
+                    </optgroup>
+                    {% endif %}
+                </select>
+            </div>
+
+            <!-- Trip Link -->
+            <div>
+                <label class="block text-xs font-medium text-slate-400 mb-1">Link to Trip</label>
+                <select name="trip_id" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-blue-500">
+                    <option value="">Not linked to a trip</option>
+                    {% for trip in trips %}
+                    <option value="{{ trip.id }}" {% if txn.trip_id == trip.id %}selected{% endif %}>✈️ {{ trip.name }} ({{ trip.destination }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Tag & Remarks -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Tag</label>
+                    <input type="text" name="tag" value="{{ txn.tag or '' }}" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-blue-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Remarks</label>
+                    <input type="text" name="remarks" value="{{ txn.remarks or '' }}" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-blue-500">
+                </div>
+            </div>
+
+            <div class="pt-4 flex items-center justify-end gap-3">
+                <a href="/transactions" class="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold">
+                    Cancel
+                </a>
+                <button type="submit" class="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-lg shadow-blue-600/30 cursor-pointer">
+                    Save Changes
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
