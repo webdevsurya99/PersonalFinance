@@ -84,20 +84,26 @@
                     </div>
                 </div>
 
-                <!-- Card Bottom: Billing & Due Reminders (Requirement 5) -->
-                <div class="pt-3 border-t border-white/10 flex items-center justify-between text-[11px]">
-                    <div class="flex items-center gap-1.5">
+                <!-- Card Bottom: Billing & Due Reminders & Actions -->
+                <div class="pt-3 border-t border-white/10 flex items-center justify-between text-[11px] gap-2 flex-wrap">
+                    <div class="flex items-center gap-1.5 min-w-0">
                         <i class="fa-regular fa-calendar-check text-white/70"></i>
-                        <span>Due: <b>{{ dates.next_due_date.strftime('%d %b') }}</b> ({{ dates.status_text }})</span>
+                        <span class="truncate">Due: <b>{{ dates.next_due_date.strftime('%d %b') }}</b></span>
                     </div>
 
-                    <div class="flex items-center gap-2">
-                        <a href="/accounts/card/{{ card.id }}/edit" class="hover:text-amber-300 text-white/80 p-1" title="Edit Card">
+                    <div class="flex items-center gap-1.5">
+                        <!-- Pay Bill Button -->
+                        <button type="button" onclick="openRepayModal({{ card.id }}, '{{ card.bank_name }} {{ card.card_name }} (••{{ card.last_4_digits }})', {{ item.used_limit }})" class="px-2.5 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 font-semibold text-xs border border-emerald-500/30 transition-all flex items-center gap-1 cursor-pointer">
+                            <i class="fa-solid fa-arrow-trend-up text-[10px]"></i>
+                            <span>Pay Bill</span>
+                        </button>
+
+                        <a href="/accounts/card/{{ card.id }}/edit" class="hover:text-amber-300 text-white/80 p-1 rounded-lg hover:bg-white/10" title="Edit Card">
                             <i class="fa-regular fa-pen-to-square"></i>
                         </a>
                         <form action="/accounts/card/{{ card.id }}/delete" method="POST" onsubmit="return confirm('Remove this card?')">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                            <button type="submit" class="hover:text-rose-300 text-white/80 p-1 cursor-pointer" title="Delete Card">
+                            <button type="submit" class="hover:text-rose-300 text-white/80 p-1 rounded-lg hover:bg-white/10 cursor-pointer" title="Delete Card">
                                 <i class="fa-regular fa-trash-can"></i>
                             </button>
                         </form>
@@ -179,4 +185,104 @@
     </div>
 
 </div>
+
+<!-- Credit Card Bill Repayment Modal -->
+<div id="repay-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-black/75 backdrop-blur-sm">
+    <div class="w-full max-w-md bg-[#161F30] border border-slate-700 rounded-3xl shadow-2xl overflow-hidden p-6 space-y-4">
+        
+        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+                    <i class="fa-solid fa-arrow-trend-up text-sm"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-base text-white">Credit Card Repayment</h3>
+                    <p class="text-[11px] text-slate-400">Pay bill & restore your available credit limit</p>
+                </div>
+            </div>
+            <button type="button" onclick="closeRepayModal()" class="w-7 h-7 rounded-lg bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center text-xs">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <form action="/accounts/card/repay" method="POST" class="space-y-4">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" id="repay-card-id" name="card_id" value="">
+
+            <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1">Repaying Credit Card</label>
+                <div id="repay-card-name" class="p-3 bg-slate-900 border border-slate-800 rounded-xl text-xs font-bold text-white">
+                    Credit Card
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1">Pay From Bank Account</label>
+                <select name="bank_account_id" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-xs focus:outline-none focus:border-emerald-500">
+                    <option value="">Direct / External Payment (No Bank Deduction)</option>
+                    {% for bank in bank_accounts %}
+                    <option value="{{ bank.id }}">🏦 {{ bank.bank_name }} - {{ bank.account_name }} (••{{ bank.account_number_last4 }}) [Bal: {{ user.currency_symbol }}{{ "%.2f"|format(bank.current_balance) }}]</option>
+                    {% endfor %}
+                </select>
+                <p class="text-[11px] text-slate-400 mt-1">Selecting a bank account will simultaneously deduct the money from that account.</p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Amount ({{ user.currency_symbol }}) *</label>
+                    <input type="number" step="0.01" min="0.01" id="repay-amount-input" name="amount" required placeholder="0.00" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white font-bold text-sm focus:outline-none focus:border-emerald-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Payment Date *</label>
+                    <input type="date" name="date" value="{{ current_date.strftime('%Y-%m-%d') if current_date else '' }}" required class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-xs focus:outline-none focus:border-emerald-500">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1">Remarks / Note</label>
+                <input type="text" name="remarks" value="Credit Card Bill Payment" class="w-full px-3.5 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white text-xs focus:outline-none focus:border-emerald-500">
+            </div>
+
+            <div class="flex items-center gap-2 pt-2">
+                <button type="button" onclick="closeRepayModal()" class="flex-1 py-2.5 px-4 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold hover:bg-slate-700 transition-colors">
+                    Cancel
+                </button>
+                <button type="submit" class="flex-1 py-2.5 px-4 rounded-xl bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-500 shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-1.5">
+                    <i class="fa-solid fa-check"></i>
+                    <span>Submit Payment</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    function openRepayModal(cardId, cardName, usedAmount) {
+        const modal = document.getElementById('repay-modal');
+        const idInput = document.getElementById('repay-card-id');
+        const nameEl = document.getElementById('repay-card-name');
+        const amtInput = document.getElementById('repay-amount-input');
+
+        if (idInput) idInput.value = cardId;
+        if (nameEl) nameEl.textContent = cardName;
+        if (amtInput && usedAmount > 0) amtInput.value = usedAmount.toFixed(2);
+
+        if (modal) {
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            document.body.style.overflow = 'hidden';
+        }
+    }
+
+    function closeRepayModal() {
+        const modal = document.getElementById('repay-modal');
+        if (modal) {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            document.body.style.overflow = '';
+        }
+    }
+</script>
 {% endblock %}

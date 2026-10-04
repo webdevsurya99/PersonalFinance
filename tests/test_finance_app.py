@@ -558,5 +558,95 @@ def test_dashboard_custom_date_range(client):
     assert len(data["category_chart"]["labels"]) == 1
     assert data["category_chart"]["data"][0] == 3500.0
 
+def test_credit_card_repayment_lifecycle(client):
+    """Test that repaying a credit card restores available credit limit and deducts source bank account."""
+    db = TestingSessionLocal()
+    user = User(
+        email="cc_repay@example.com",
+        full_name="Repay User",
+        hashed_password=hash_password("Pass1234!"),
+        is_admin=False,
+        currency_symbol="₹"
+    )
+    db.add(user)
+    db.commit()
+    user_id = user.id
+    user_email = user.email
+
+    # Create Bank with 50,000 balance
+    bank = BankAccount(
+        user_id=user_id,
+        bank_name="HDFC Bank",
+        account_name="Savings",
+        account_number_last4="1122",
+        initial_balance=50000.0,
+        current_balance=50000.0
+    )
+    # Create Card with 200,000 total limit and 150,000 available (i.e. 50,000 spent)
+    card = CreditCard(
+        user_id=user_id,
+        bank_name="ICICI Bank",
+        card_name="Coral Card",
+        card_network="Visa",
+        last_4_digits="9988",
+        total_limit=200000.0,
+        opening_limit=200000.0,
+        available_limit=150000.0,
+        billing_day=15,
+        due_day=5
+    )
+    db.add_all([bank, card])
+    db.commit()
+    bank_id = bank.id
+    card_id = card.id
+    db.close()
+
+    token = create_access_token(data={"sub": str(user_id), "email": user_email})
+    client.cookies.set("fin_session_token", token)
+    csrf = generate_csrf_token(user_id)
+
+    # 1. Repay 20,000 using the Dedicated CC Repayment endpoint
+    repay_res = client.post("/accounts/card/repay", data={
+        "card_id": str(card_id),
+        "bank_account_id": str(bank_id),
+        "amount": "20000.00",
+        "date": "2026-10-04",
+        "remarks": "Monthly CC bill payment",
+        "csrf_token": csrf
+    }, follow_redirects=False)
+    assert repay_res.status_code == 303
+
+    db2 = TestingSessionLocal()
+    card_after = db2.query(CreditCard).filter(CreditCard.id == card_id).first()
+    bank_after = db2.query(BankAccount).filter(BankAccount.id == bank_id).first()
+    txn = db2.query(Transaction).filter(Transaction.user_id == user_id, Transaction.tag == "#CCRepayment").first()
+
+    # Credit limit restored from 150,000 to 170,000
+    assert card_after.available_limit == 170000.0
+    # Bank balance deducted from 50,000 to 30,000
+    assert bank_after.current_balance == 30000.0
+    assert txn is not None
+    assert txn.amount == 20000.0
+    db2.close()
+
+    # 2. Test Quick Lodge Income directly to credit card restores remaining limit
+    lodge_res = client.post("/transactions/new", data={
+        "type": "income",
+        "amount": "30000.00",
+        "date": "2026-10-04",
+        "payment_source": f"card:{card_id}",
+        "tag": "#DirectCredit",
+        "remarks": "Refund / Direct Repay",
+        "csrf_token": csrf
+    }, follow_redirects=False)
+    assert lodge_res.status_code == 303
+
+    db3 = TestingSessionLocal()
+    card_final = db3.query(CreditCard).filter(CreditCard.id == card_id).first()
+    # Credit limit restored from 170,000 to 200,000 (total limit)
+    assert card_final.available_limit == 200000.0
+    db3.close()
+
+
 
 

@@ -339,6 +339,89 @@ async def delete_card(
 
     return RedirectResponse(url="/accounts", status_code=status.HTTP_303_SEE_OTHER)
 
+@router.post("/accounts/card/repay")
+async def repay_credit_card(
+    request: Request,
+    card_id: int = Form(...),
+    bank_account_id: Optional[str] = Form(None),
+    amount: float = Form(...),
+    date: Optional[str] = Form(None),
+    remarks: Optional[str] = Form("Credit Card Bill Payment"),
+    csrf_token: str = Form(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    await verify_csrf(request, current_user)
+    if amount <= 0:
+        raise HTTPException(status_code=400, detail="Repayment amount must be greater than zero.")
+
+    card = db.query(CreditCard).filter(CreditCard.id == card_id, CreditCard.user_id == current_user.id).first()
+    if not card:
+        raise HTTPException(status_code=404, detail="Credit card not found.")
+
+    # Parse date
+    txn_date = DateProvider.get_current_date(db)
+    if date:
+        try:
+            txn_date = datetime.datetime.strptime(date.strip(), "%Y-%m-%d").date()
+        except ValueError:
+            pass
+
+    # 1. Increase available limit on the Credit Card (capped at total_limit)
+    card.available_limit = min(card.total_limit, card.available_limit + amount)
+    card.updated_at = get_now_utc()
+
+    # 2. If paid from a Bank Account, deduct bank account balance
+    bank_acc = None
+    parsed_bank_id = None
+    if bank_account_id and bank_account_id.strip():
+        try:
+            parsed_bank_id = int(bank_account_id.strip())
+        except ValueError:
+            pass
+
+    if parsed_bank_id and parsed_bank_id > 0:
+        bank_acc = db.query(BankAccount).filter(BankAccount.id == parsed_bank_id, BankAccount.user_id == current_user.id).first()
+        if bank_acc:
+            bank_acc.current_balance -= amount
+            bank_acc.updated_at = get_now_utc()
+
+    # 3. Find or seed Category
+    cat = db.query(Category).filter(
+        Category.user_id == current_user.id,
+        (Category.name.ilike("%bill%")) | (Category.name.ilike("%repay%")) | (Category.name.ilike("%utility%"))
+    ).first()
+    cat_id = cat.id if cat else None
+
+    # 4. Record transaction log for the repayment
+    clean_remarks = sanitize_text(remarks) or f"Repayment for {card.card_name} (••{card.last_4_digits})"
+    
+    repay_txn = Transaction(
+        user_id=current_user.id,
+        type="income",
+        amount=amount,
+        date=txn_date,
+        category_id=cat_id,
+        bank_account_id=bank_acc.id if bank_acc else None,
+        credit_card_id=card.id,
+        tag="#CCRepayment",
+        remarks=clean_remarks,
+        created_at=DateProvider.get_current_datetime(db)
+    )
+    db.add(repay_txn)
+
+    # 5. Audit log
+    audit = AuditLog(
+        user_id=current_user.id,
+        action="CC_REPAYMENT",
+        details=f"Paid {amount} towards {card.bank_name} {card.card_name} (••{card.last_4_digits})" + (f" from bank A/C {bank_acc.account_name}" if bank_acc else ""),
+        created_at=get_now_utc()
+    )
+    db.add(audit)
+    db.commit()
+
+    return RedirectResponse(url="/accounts", status_code=status.HTTP_303_SEE_OTHER)
+
 @router.get("/api/banks/presets")
 @router.get("/api/presets/banks")
 async def get_bank_presets_api():
