@@ -1,9 +1,13 @@
-const CACHE_NAME = 'finminimal-v1.0.0';
+const CACHE_NAME = 'finminimal-v1.0.1';
 const STATIC_ASSETS = [
   '/',
   '/offline.html',
   '/static/css/style.css',
   '/static/js/app.js',
+  '/static/vendor/fontawesome/css/all.min.css',
+  '/static/vendor/fontawesome/webfonts/fa-solid-900.woff2',
+  '/static/vendor/fontawesome/webfonts/fa-regular-400.woff2',
+  '/static/vendor/fontawesome/webfonts/fa-brands-400.woff2',
   '/manifest.json'
 ];
 

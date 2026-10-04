@@ -401,7 +401,7 @@ def test_export_statements(client):
     assert pdf_res.content.startswith(b"%PDF")
 
 def test_security_headers_and_pwa(client):
-    """Verify OWASP security headers and PWA manifest delivery."""
+    """Verify OWASP security headers, PWA manifest delivery, and local icon assets."""
     res = client.get("/manifest.json")
     assert res.status_code == 200
     manifest = res.json()
@@ -411,6 +411,15 @@ def test_security_headers_and_pwa(client):
     assert res.headers.get("x-frame-options") == "DENY"
     assert res.headers.get("x-content-type-options") == "nosniff"
     assert "default-src 'self'" in res.headers.get("content-security-policy", "")
+
+    # Verify self-hosted font awesome assets
+    fa_css = client.get("/static/vendor/fontawesome/css/all.min.css")
+    assert fa_css.status_code == 200
+    assert len(fa_css.content) > 1000
+
+    fa_font = client.get("/static/vendor/fontawesome/webfonts/fa-solid-900.woff2")
+    assert fa_font.status_code == 200
+    assert len(fa_font.content) > 1000
 
 def test_all_pages_render(client):
     """Verify all web UI pages render with HTTP 200 and no Jinja template errors."""

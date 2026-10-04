@@ -13,6 +13,30 @@ body {
   padding-bottom: calc(var(--safe-area-inset-bottom) + 4.5rem);
 }
 
+/* Ensure Font Awesome Icons Render Reliably across all browsers */
+.fa, .fas, .fa-solid, .far, .fa-regular, .fab, .fa-brands {
+  display: inline-block !important;
+  font-style: normal !important;
+  font-variant: normal !important;
+  text-rendering: auto !important;
+  line-height: 1 !important;
+}
+
+.fa, .fas, .fa-solid {
+  font-family: "Font Awesome 6 Free" !important;
+  font-weight: 900 !important;
+}
+
+.far, .fa-regular {
+  font-family: "Font Awesome 6 Free" !important;
+  font-weight: 400 !important;
+}
+
+.fab, .fa-brands {
+  font-family: "Font Awesome 6 Brands" !important;
+  font-weight: 400 !important;
+}
+
 @media (min-width: 1024px) {
   body {
     padding-bottom: 0;
