@@ -30,6 +30,31 @@ select {
   overflow: hidden;
 }
 
+/* iOS Safari Date Picker Normalization */
+input[type="date"] {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  line-height: normal;
+}
+
+input[type="date"]::-webkit-date-and-time-value {
+  text-align: left;
+  line-height: normal;
+  margin: 0;
+  padding: 0;
+  display: block;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.8);
+  opacity: 0.7;
+  cursor: pointer;
+  margin-left: auto;
+}
+
 /* Ensure Font Awesome Icons Render Reliably across all browsers */
 .fa, .fas, .fa-solid, .far, .fa-regular, .fab, .fa-brands {
   display: inline-block !important;

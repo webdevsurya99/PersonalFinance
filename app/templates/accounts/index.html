@@ -216,37 +216,45 @@
             </div>
 
             <div>
-                <label class="block text-[11px] font-semibold text-slate-400 mb-0.5">Pay From Bank Account</label>
-                <select name="bank_account_id" class="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-700/80 rounded-xl text-white text-xs focus:outline-none focus:border-emerald-500 truncate box-border">
-                    <option value="">Direct / External Payment (No Bank Deduction)</option>
-                    {% for bank in bank_accounts %}
-                    <option value="{{ bank.id }}">🏦 {{ bank.bank_name }} - {{ bank.account_name }} (••{{ bank.account_number_last4 }}) [{{ user.currency_symbol }}{{ "%.0f"|format(bank.current_balance) }}]</option>
-                    {% endfor %}
-                </select>
+                <label class="block text-[11px] font-semibold text-slate-400 mb-1">Pay From Bank Account</label>
+                <div class="relative flex items-center">
+                    <select name="bank_account_id" class="w-full h-10 px-3 bg-slate-900 border border-slate-700/80 rounded-xl text-white text-xs sm:text-sm focus:outline-none focus:border-emerald-500 truncate box-border leading-none">
+                        <option value="">Direct / External Payment (No Bank Deduction)</option>
+                        {% for bank in bank_accounts %}
+                        <option value="{{ bank.id }}">🏦 {{ bank.bank_name }} - {{ bank.account_name }} (••{{ bank.account_number_last4 }}) [{{ user.currency_symbol }}{{ "%.0f"|format(bank.current_balance) }}]</option>
+                        {% endfor %}
+                    </select>
+                </div>
                 <p class="text-[10px] text-slate-500 mt-0.5">Deducts from selected bank balance.</p>
             </div>
 
-            <div class="grid grid-cols-2 gap-2">
+            <div class="grid grid-cols-2 gap-2.5">
                 <div>
-                    <label class="block text-[11px] font-semibold text-slate-400 mb-0.5">Amount ({{ user.currency_symbol }}) *</label>
-                    <input type="number" step="0.01" min="0.01" id="repay-amount-input" name="amount" required placeholder="0.00" class="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-700/80 rounded-xl text-white font-bold text-sm focus:outline-none focus:border-emerald-500 box-border">
+                    <label class="block text-[11px] font-semibold text-slate-400 mb-1">Amount ({{ user.currency_symbol }}) *</label>
+                    <div class="relative flex items-center">
+                        <input type="number" step="0.01" min="0.01" id="repay-amount-input" name="amount" required placeholder="0.00" class="w-full h-10 px-3 bg-slate-900 border border-slate-700/80 rounded-xl text-white font-bold text-xs sm:text-sm focus:outline-none focus:border-emerald-500 box-border leading-none">
+                    </div>
                 </div>
                 <div>
-                    <label class="block text-[11px] font-semibold text-slate-400 mb-0.5">Payment Date *</label>
-                    <input type="date" name="date" value="{{ current_date.strftime('%Y-%m-%d') if current_date else '' }}" required class="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-700/80 rounded-xl text-white text-xs focus:outline-none focus:border-emerald-500 box-border">
+                    <label class="block text-[11px] font-semibold text-slate-400 mb-1">Payment Date *</label>
+                    <div class="relative flex items-center">
+                        <input type="date" name="date" value="{{ current_date.strftime('%Y-%m-%d') if current_date else '' }}" required class="w-full h-10 px-3 bg-slate-900 border border-slate-700/80 rounded-xl text-white font-semibold text-xs sm:text-sm focus:outline-none focus:border-emerald-500 box-border leading-none">
+                    </div>
                 </div>
             </div>
 
             <div>
-                <label class="block text-[11px] font-semibold text-slate-400 mb-0.5">Remarks / Note</label>
-                <input type="text" name="remarks" value="Credit Card Bill Payment" class="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-700/80 rounded-xl text-white text-xs focus:outline-none focus:border-emerald-500 box-border">
+                <label class="block text-[11px] font-semibold text-slate-400 mb-1">Remarks / Note</label>
+                <div class="relative flex items-center">
+                    <input type="text" name="remarks" value="Credit Card Bill Payment" class="w-full h-10 px-3 bg-slate-900 border border-slate-700/80 rounded-xl text-white text-xs sm:text-sm focus:outline-none focus:border-emerald-500 box-border leading-none">
+                </div>
             </div>
 
-            <div class="flex items-center gap-2 pt-1">
-                <button type="button" onclick="closeRepayModal()" class="flex-1 py-2 px-3 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold hover:bg-slate-700 transition-colors">
+            <div class="flex items-center gap-2 pt-1.5">
+                <button type="button" onclick="closeRepayModal()" class="flex-1 h-10 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold hover:bg-slate-700 transition-colors">
                     Cancel
                 </button>
-                <button type="submit" class="flex-1 py-2 px-3 rounded-xl bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-500 shadow-md shadow-emerald-500/20 transition-all flex items-center justify-center gap-1.5">
+                <button type="submit" class="flex-1 h-10 rounded-xl bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-500 shadow-md shadow-emerald-500/20 transition-all flex items-center justify-center gap-1.5">
                     <i class="fa-solid fa-check text-xs"></i>
                     <span>Submit Payment</span>
                 </button>
