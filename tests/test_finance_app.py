@@ -411,3 +411,49 @@ def test_security_headers_and_pwa(client):
     assert res.headers.get("x-frame-options") == "DENY"
     assert res.headers.get("x-content-type-options") == "nosniff"
     assert "default-src 'self'" in res.headers.get("content-security-policy", "")
+
+def test_all_pages_render(client):
+    """Verify all web UI pages render with HTTP 200 and no Jinja template errors."""
+    db = TestingSessionLocal()
+    user = User(
+        email="ui_tester@example.com",
+        full_name="UI Tester",
+        hashed_password=hash_password("Secret123!"),
+        is_admin=True,
+        currency_symbol="₹"
+    )
+    db.add(user)
+    db.commit()
+    user_id = user.id
+    user_email = user.email
+    db.close()
+
+    # Unauthenticated should redirect to login
+    anon_resp = client.get("/dashboard", follow_redirects=False)
+    assert anon_resp.status_code in (303, 307)
+    assert "/login" in anon_resp.headers["location"]
+
+    token = create_access_token(data={"sub": str(user_id), "email": user_email})
+    client.cookies.set("fin_session_token", token)
+
+    endpoints = [
+        "/dashboard",
+        "/transactions",
+        "/accounts",
+        "/categories",
+        "/trips",
+        "/export",
+        "/notifications",
+        "/admin",
+        "/profile",
+        "/api/dashboard/stats",
+        "/api/notifications/unread-count",
+        "/api/banks/presets",
+        "/api/cards/presets",
+    ]
+
+    for endpoint in endpoints:
+        resp = client.get(endpoint)
+        assert resp.status_code == 200, f"Endpoint {endpoint} returned status {resp.status_code}"
+
+

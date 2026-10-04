@@ -6,7 +6,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import User, Transaction, BankAccount, CreditCard, Trip, SystemSetting, AuditLog
+from app.models import User, Transaction, BankAccount, CreditCard, Trip, SystemSetting, AuditLog, Category
 from app.dependencies import get_current_admin_user, verify_csrf
 from app.core.date_provider import DateProvider, SIMULATED_DATE_KEY
 from app.core.security import generate_csrf_token, sanitize_text
@@ -38,6 +38,13 @@ async def admin_portal(
 
     csrf_token = generate_csrf_token(current_admin.id)
 
+    categories = db.query(Category).filter(
+        (Category.user_id == current_admin.id) | (Category.is_system == True)
+    ).order_by(Category.name.asc()).all()
+    user_banks = db.query(BankAccount).filter(BankAccount.user_id == current_admin.id, BankAccount.is_active == True).all()
+    user_cards = db.query(CreditCard).filter(CreditCard.user_id == current_admin.id, CreditCard.is_active == True).all()
+    active_trips = db.query(Trip).filter(Trip.user_id == current_admin.id, Trip.status.in_(["active", "planned"])).all()
+
     return templates.TemplateResponse(
         request=request,
         name="admin/index.html",
@@ -45,6 +52,7 @@ async def admin_portal(
             "user": current_admin,
             "current_date": current_date,
             "is_simulated": is_simulated,
+            "is_simulated_date": is_simulated,
             "real_system_date": real_system_date,
             "total_users": total_users,
             "total_txns": total_txns,
@@ -53,6 +61,10 @@ async def admin_portal(
             "total_trips": total_trips,
             "users": users,
             "recent_audits": recent_audits,
+            "categories": categories,
+            "bank_accounts": user_banks,
+            "credit_cards": user_cards,
+            "active_trips": active_trips,
             "csrf_token": csrf_token
         }
     )

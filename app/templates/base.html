@@ -131,13 +131,13 @@
                 </div>
 
                 <!-- Admin Date Override Banner (if active) -->
-                {% if is_simulated_date %}
+                {% if is_simulated_date and current_date %}
                 <div class="flex items-center gap-2 px-3 py-1 bg-amber-500/15 border border-amber-500/30 rounded-full text-xs text-amber-400 font-medium">
                     <i class="fa-solid fa-clock-rotate-left"></i>
                     <span>Simulated Date: <b>{{ current_date.strftime('%d %b %Y') }}</b></span>
                     <a href="/admin" class="underline hover:text-white ml-1">Manage</a>
                 </div>
-                {% else %}
+                {% elif current_date %}
                 <div class="hidden sm:flex items-center gap-2 text-xs text-slate-400">
                     <i class="fa-regular fa-calendar"></i>
                     <span>{{ current_date.strftime('%A, %d %B %Y') }}</span>

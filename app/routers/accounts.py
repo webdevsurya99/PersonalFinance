@@ -6,7 +6,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import User, BankAccount, CreditCard, Transaction, AuditLog
+from app.models import User, BankAccount, CreditCard, Category, Trip, Transaction, AuditLog
 from app.dependencies import get_current_user, verify_csrf
 from app.core.date_provider import DateProvider
 from app.core.security import generate_csrf_token, sanitize_text
@@ -19,23 +19,36 @@ templates = Jinja2Templates(directory="app/templates")
 def get_now_utc() -> datetime.datetime:
     return datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
 
+def get_common_context(db: Session, user: User) -> dict:
+    categories = db.query(Category).filter(
+        (Category.user_id == user.id) | (Category.is_system == True)
+    ).order_by(Category.name.asc()).all()
+    bank_accounts = db.query(BankAccount).filter(BankAccount.user_id == user.id, BankAccount.is_active == True).all()
+    credit_cards = db.query(CreditCard).filter(CreditCard.user_id == user.id, CreditCard.is_active == True).all()
+    active_trips = db.query(Trip).filter(Trip.user_id == user.id, Trip.status.in_(["active", "planned"])).all()
+    current_date = DateProvider.get_current_date(db)
+    is_simulated = DateProvider.is_date_simulated(db)
+    csrf_token = generate_csrf_token(user.id)
+    return {
+        "user": user,
+        "categories": categories,
+        "bank_accounts": bank_accounts,
+        "credit_cards": credit_cards,
+        "active_trips": active_trips,
+        "current_date": current_date,
+        "is_simulated_date": is_simulated,
+        "csrf_token": csrf_token
+    }
+
 @router.get("/accounts", response_class=HTMLResponse)
 async def accounts_overview_page(
     request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    current_date = DateProvider.get_current_date(db)
-
-    bank_accounts = db.query(BankAccount).filter(
-        BankAccount.user_id == current_user.id,
-        BankAccount.is_active == True
-    ).order_by(BankAccount.current_balance.desc()).all()
-
-    credit_cards = db.query(CreditCard).filter(
-        CreditCard.user_id == current_user.id,
-        CreditCard.is_active == True
-    ).all()
+    ctx = get_common_context(db, current_user)
+    current_date = ctx["current_date"]
+    credit_cards = ctx["credit_cards"]
 
     cards_with_meta = []
     for card in credit_cards:
@@ -49,19 +62,16 @@ async def accounts_overview_page(
             "utilization_pct": utilization_pct
         })
 
-    csrf_token = generate_csrf_token(current_user.id)
+    ctx.update({
+        "cards_with_meta": cards_with_meta,
+        "bank_presets": INDIAN_BANKS,
+        "card_presets": INDIAN_CREDIT_CARDS
+    })
 
     return templates.TemplateResponse(
         request=request,
         name="accounts/index.html",
-        context={
-            "user": current_user,
-            "bank_accounts": bank_accounts,
-            "cards_with_meta": cards_with_meta,
-            "bank_presets": INDIAN_BANKS,
-            "card_presets": INDIAN_CREDIT_CARDS,
-            "csrf_token": csrf_token
-        }
+        context=ctx
     )
 
 # ----------------- Bank Accounts -----------------
@@ -69,17 +79,15 @@ async def accounts_overview_page(
 @router.get("/accounts/bank/new", response_class=HTMLResponse)
 async def add_bank_page(
     request: Request,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
-    csrf_token = generate_csrf_token(current_user.id)
+    ctx = get_common_context(db, current_user)
+    ctx.update({"bank_presets": INDIAN_BANKS})
     return templates.TemplateResponse(
         request=request,
         name="accounts/add_bank.html",
-        context={
-            "user": current_user,
-            "bank_presets": INDIAN_BANKS,
-            "csrf_token": csrf_token
-        }
+        context=ctx
     )
 
 @router.post("/accounts/bank/new")
@@ -128,16 +136,16 @@ async def edit_bank_page(
     if not bank:
         raise HTTPException(status_code=404, detail="Bank account not found.")
 
-    csrf_token = generate_csrf_token(current_user.id)
+    ctx = get_common_context(db, current_user)
+    ctx.update({
+        "bank": bank,
+        "bank_presets": INDIAN_BANKS
+    })
+
     return templates.TemplateResponse(
         request=request,
         name="accounts/edit_bank.html",
-        context={
-            "user": current_user,
-            "bank": bank,
-            "bank_presets": INDIAN_BANKS,
-            "csrf_token": csrf_token
-        }
+        context=ctx
     )
 
 @router.post("/accounts/bank/{bank_id}/edit")
@@ -195,17 +203,15 @@ async def delete_bank(
 @router.get("/accounts/card/new", response_class=HTMLResponse)
 async def add_card_page(
     request: Request,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
-    csrf_token = generate_csrf_token(current_user.id)
+    ctx = get_common_context(db, current_user)
+    ctx.update({"card_presets": INDIAN_CREDIT_CARDS})
     return templates.TemplateResponse(
         request=request,
         name="accounts/add_card.html",
-        context={
-            "user": current_user,
-            "card_presets": INDIAN_CREDIT_CARDS,
-            "csrf_token": csrf_token
-        }
+        context=ctx
     )
 
 @router.post("/accounts/card/new")
@@ -261,16 +267,16 @@ async def edit_card_page(
     if not card:
         raise HTTPException(status_code=404, detail="Credit card not found.")
 
-    csrf_token = generate_csrf_token(current_user.id)
+    ctx = get_common_context(db, current_user)
+    ctx.update({
+        "card": card,
+        "card_presets": INDIAN_CREDIT_CARDS
+    })
+
     return templates.TemplateResponse(
         request=request,
         name="accounts/edit_card.html",
-        context={
-            "user": current_user,
-            "card": card,
-            "card_presets": INDIAN_CREDIT_CARDS,
-            "csrf_token": csrf_token
-        }
+        context=ctx
     )
 
 @router.post("/accounts/card/{card_id}/edit")
@@ -332,3 +338,14 @@ async def delete_card(
     db.commit()
 
     return RedirectResponse(url="/accounts", status_code=status.HTTP_303_SEE_OTHER)
+
+@router.get("/api/banks/presets")
+@router.get("/api/presets/banks")
+async def get_bank_presets_api():
+    return JSONResponse({"banks": INDIAN_BANKS})
+
+@router.get("/api/cards/presets")
+@router.get("/api/presets/cards")
+async def get_card_presets_api():
+    return JSONResponse({"cards": INDIAN_CREDIT_CARDS})
+

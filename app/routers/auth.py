@@ -6,10 +6,11 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.database import get_db
-from app.models import User, Category, AuditLog
+from app.models import User, Category, AuditLog, BankAccount, CreditCard, Trip
 from app.core.security import hash_password, verify_password, create_access_token, generate_csrf_token, sanitize_text
 from app.core.rate_limiter import limiter
 from app.core.presets import DEFAULT_CATEGORIES
+from app.core.date_provider import DateProvider
 from app.dependencies import get_current_user_optional, get_current_user
 
 router = APIRouter(tags=["Authentication"])
@@ -212,11 +213,31 @@ async def profile_page(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
+    categories = db.query(Category).filter(
+        (Category.user_id == current_user.id) | (Category.is_system == True)
+    ).order_by(Category.name.asc()).all()
+    bank_accounts = db.query(BankAccount).filter(BankAccount.user_id == current_user.id, BankAccount.is_active == True).all()
+    credit_cards = db.query(CreditCard).filter(CreditCard.user_id == current_user.id, CreditCard.is_active == True).all()
+    active_trips = db.query(Trip).filter(Trip.user_id == current_user.id, Trip.status.in_(["active", "planned"])).all()
+    current_date = DateProvider.get_current_date(db)
+    is_simulated = DateProvider.is_date_simulated(db)
     csrf_token = generate_csrf_token(current_user.id)
+
     return templates.TemplateResponse(
         request=request,
         name="auth/profile.html",
-        context={"user": current_user, "csrf_token": csrf_token, "message": None, "error": None}
+        context={
+            "user": current_user,
+            "categories": categories,
+            "bank_accounts": bank_accounts,
+            "credit_cards": credit_cards,
+            "active_trips": active_trips,
+            "current_date": current_date,
+            "is_simulated_date": is_simulated,
+            "csrf_token": csrf_token,
+            "message": None,
+            "error": None
+        }
     )
 
 @router.post("/profile", response_class=HTMLResponse)
@@ -253,8 +274,28 @@ async def profile_update(
         current_user.updated_at = get_now_utc()
         db.commit()
 
+    categories = db.query(Category).filter(
+        (Category.user_id == current_user.id) | (Category.is_system == True)
+    ).order_by(Category.name.asc()).all()
+    bank_accounts = db.query(BankAccount).filter(BankAccount.user_id == current_user.id, BankAccount.is_active == True).all()
+    credit_cards = db.query(CreditCard).filter(CreditCard.user_id == current_user.id, CreditCard.is_active == True).all()
+    active_trips = db.query(Trip).filter(Trip.user_id == current_user.id, Trip.status.in_(["active", "planned"])).all()
+    current_date = DateProvider.get_current_date(db)
+    is_simulated = DateProvider.is_date_simulated(db)
+
     return templates.TemplateResponse(
         request=request,
         name="auth/profile.html",
-        context={"user": current_user, "csrf_token": new_csrf, "message": message if not error else None, "error": error}
+        context={
+            "user": current_user,
+            "categories": categories,
+            "bank_accounts": bank_accounts,
+            "credit_cards": credit_cards,
+            "active_trips": active_trips,
+            "current_date": current_date,
+            "is_simulated_date": is_simulated,
+            "csrf_token": new_csrf,
+            "message": message if not error else None,
+            "error": error
+        }
     )

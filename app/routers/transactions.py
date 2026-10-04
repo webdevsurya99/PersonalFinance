@@ -102,7 +102,9 @@ async def list_transactions(
     credit_cards = db.query(CreditCard).filter(CreditCard.user_id == current_user.id, CreditCard.is_active == True).all()
     trips = db.query(Trip).filter(Trip.user_id == current_user.id).order_by(Trip.start_date.desc()).all()
 
+    active_trips = [t for t in trips if t.status in ("active", "planned")]
     current_date = DateProvider.get_current_date(db)
+    is_simulated = DateProvider.is_date_simulated(db)
     csrf_token = generate_csrf_token(current_user.id)
 
     total_pages = max(1, (total_count + limit - 1) // limit)
@@ -121,7 +123,9 @@ async def list_transactions(
             "bank_accounts": bank_accounts,
             "credit_cards": credit_cards,
             "trips": trips,
+            "active_trips": active_trips,
             "current_date": current_date,
+            "is_simulated_date": is_simulated,
             "csrf_token": csrf_token,
             "filters": {
                 "type": type or "",

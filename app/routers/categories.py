@@ -6,10 +6,11 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import User, Category, Transaction
+from app.models import User, Category, Transaction, BankAccount, CreditCard, Trip
 from app.dependencies import get_current_user, verify_csrf
 from app.core.security import generate_csrf_token, sanitize_text
 from app.core.presets import DEFAULT_CATEGORIES, POPULAR_ICONS
+from app.core.date_provider import DateProvider
 
 router = APIRouter(tags=["Categories"])
 templates = Jinja2Templates(directory="app/templates")
@@ -35,6 +36,13 @@ async def categories_page(
         ).count()
         cat_stats[cat.id] = count
 
+    # Lookups for quick modal
+    bank_accounts = db.query(BankAccount).filter(BankAccount.user_id == current_user.id, BankAccount.is_active == True).all()
+    credit_cards = db.query(CreditCard).filter(CreditCard.user_id == current_user.id, CreditCard.is_active == True).all()
+    active_trips = db.query(Trip).filter(Trip.user_id == current_user.id, Trip.status.in_(["active", "planned"])).all()
+
+    current_date = DateProvider.get_current_date(db)
+    is_simulated = DateProvider.is_date_simulated(db)
     csrf_token = generate_csrf_token(current_user.id)
 
     return templates.TemplateResponse(
@@ -45,6 +53,11 @@ async def categories_page(
             "categories": categories,
             "cat_stats": cat_stats,
             "popular_icons": POPULAR_ICONS,
+            "bank_accounts": bank_accounts,
+            "credit_cards": credit_cards,
+            "active_trips": active_trips,
+            "current_date": current_date,
+            "is_simulated_date": is_simulated,
             "csrf_token": csrf_token
         }
     )

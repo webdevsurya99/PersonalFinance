@@ -39,7 +39,15 @@ async def trips_list_page(
             "is_overbudget": spent > trip.budget if trip.budget > 0 else False
         })
 
+    categories = db.query(Category).filter(
+        (Category.user_id == current_user.id) | (Category.is_system == True)
+    ).order_by(Category.name.asc()).all()
+    bank_accounts = db.query(BankAccount).filter(BankAccount.user_id == current_user.id, BankAccount.is_active == True).all()
+    credit_cards = db.query(CreditCard).filter(CreditCard.user_id == current_user.id, CreditCard.is_active == True).all()
+    active_trips = db.query(Trip).filter(Trip.user_id == current_user.id, Trip.status.in_(["active", "planned"])).all()
+
     current_date = DateProvider.get_current_date(db)
+    is_simulated = DateProvider.is_date_simulated(db)
     csrf_token = generate_csrf_token(current_user.id)
 
     return templates.TemplateResponse(
@@ -48,7 +56,12 @@ async def trips_list_page(
         context={
             "user": current_user,
             "trips_data": trips_data,
+            "categories": categories,
+            "bank_accounts": bank_accounts,
+            "credit_cards": credit_cards,
+            "active_trips": active_trips,
             "current_date": current_date,
+            "is_simulated_date": is_simulated,
             "csrf_token": csrf_token
         }
     )
@@ -130,8 +143,10 @@ async def trip_detail_page(
 
     bank_accounts = db.query(BankAccount).filter(BankAccount.user_id == current_user.id, BankAccount.is_active == True).all()
     credit_cards = db.query(CreditCard).filter(CreditCard.user_id == current_user.id, CreditCard.is_active == True).all()
+    active_trips = db.query(Trip).filter(Trip.user_id == current_user.id, Trip.status.in_(["active", "planned"])).all()
 
     current_date = DateProvider.get_current_date(db)
+    is_simulated = DateProvider.is_date_simulated(db)
     csrf_token = generate_csrf_token(current_user.id)
 
     return templates.TemplateResponse(
@@ -148,7 +163,9 @@ async def trip_detail_page(
             "categories": categories,
             "bank_accounts": bank_accounts,
             "credit_cards": credit_cards,
+            "active_trips": active_trips,
             "current_date": current_date,
+            "is_simulated_date": is_simulated,
             "csrf_token": csrf_token
         }
     )

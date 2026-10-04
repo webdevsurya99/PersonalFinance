@@ -70,7 +70,11 @@ async def export_hub_page(
     credit_cards = db.query(CreditCard).filter(CreditCard.user_id == current_user.id, CreditCard.is_active == True).all()
     trips = db.query(Trip).filter(Trip.user_id == current_user.id).order_by(Trip.start_date.desc()).all()
 
+    active_trips = [t for t in trips if t.status in ("active", "planned")]
     current_date = DateProvider.get_current_date(db)
+    is_simulated = DateProvider.is_date_simulated(db)
+    from app.core.security import generate_csrf_token
+    csrf_token = generate_csrf_token(current_user.id)
 
     return templates.TemplateResponse(
         request=request,
@@ -81,7 +85,10 @@ async def export_hub_page(
             "bank_accounts": bank_accounts,
             "credit_cards": credit_cards,
             "trips": trips,
-            "current_date": current_date
+            "active_trips": active_trips,
+            "current_date": current_date,
+            "is_simulated_date": is_simulated,
+            "csrf_token": csrf_token
         }
     )
 
