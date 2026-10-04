@@ -17,11 +17,13 @@
 
     <!-- Bank Presets Selector -->
     <div class="glass-card rounded-2xl p-5 border border-slate-800">
-        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Popular Major Indian Banks</label>
+        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Popular Major Indian Banks (Click to auto-fill)</label>
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
             {% for b in bank_presets %}
-            <button type="button" onclick="selectBankPreset('{{ b.name }}', '{{ b.color }}')" class="p-2.5 rounded-xl border border-slate-800 hover:border-blue-500/50 bg-slate-900/60 hover:bg-slate-800/80 text-left transition-all flex items-center gap-2 group cursor-pointer">
-                <div class="w-3 h-3 rounded-full shrink-0" style="background-color: {{ b.color }};"></div>
+            <button type="button" onclick="selectBankPreset('{{ b.name }}', '{{ b.color }}')" class="p-2.5 rounded-xl border border-slate-800 hover:border-blue-500/50 bg-slate-900/60 hover:bg-slate-800/80 text-left transition-all flex items-center gap-2.5 group cursor-pointer">
+                <div class="w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-bold text-white shadow-xs shrink-0" style="background-color: {{ b.color }};">
+                    <i class="fa-solid fa-building-columns text-[9px]"></i>
+                </div>
                 <span class="text-xs font-medium text-slate-300 group-hover:text-white truncate">{{ b.short_name }}</span>
             </button>
             {% endfor %}

@@ -22,7 +22,7 @@
     <div class="glass-card rounded-2xl p-5 border border-blue-500/30 bg-blue-950/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div class="flex items-center gap-3.5">
             <div class="w-11 h-11 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center text-xl shrink-0">
-                <i class="fa-solid fa-bell-ring"></i>
+                <i class="fa-solid fa-bell"></i>
             </div>
             <div>
                 <h3 class="font-bold text-sm text-white">Credit Card Due Date Push Notifications</h3>
@@ -45,7 +45,7 @@
                         {% if n.type == 'due_date' %}
                         <i class="fa-solid fa-triangle-exclamation"></i>
                         {% elif n.type == 'billing_date' %}
-                        <i class="fa-regular fa-file-invoice"></i>
+                        <i class="fa-solid fa-file-invoice"></i>
                         {% else %}
                         <i class="fa-solid fa-bell"></i>
                         {% endif %}
