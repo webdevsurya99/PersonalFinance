@@ -52,6 +52,7 @@ def export_full_database_json(db: Session) -> Dict[str, Any]:
             "is_admin": u.is_admin,
             "is_active": u.is_active,
             "currency_symbol": u.currency_symbol,
+            "monthly_budget": getattr(u, "monthly_budget", 25000.0) or 25000.0,
             "created_at": u.created_at.isoformat() if u.created_at else None,
             "updated_at": u.updated_at.isoformat() if u.updated_at else None,
         })

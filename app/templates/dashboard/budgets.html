@@ -1,0 +1,255 @@
+{% extends "base.html" %}
+
+{% block title %}Budgets & Insights - FinMinimal{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto space-y-5">
+
+    <!-- Top Header (Image 2) -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Budgets & Insights</h1>
+            <p class="text-xs sm:text-sm text-slate-500 font-medium mt-0.5">Track limits, burn rate & forecasts</p>
+        </div>
+        
+        <!-- Header Actions: Filter & Edit -->
+        <div class="flex items-center gap-2">
+            <button type="button" onclick="document.getElementById('category-breakdown-list').scrollIntoView({behavior: 'smooth'})" title="Filter / Details" class="w-10 h-10 rounded-full bg-white border border-slate-200/90 text-slate-700 hover:text-slate-900 hover:bg-slate-50 flex items-center justify-center shadow-2xs transition-colors cursor-pointer">
+                <i class="fa-solid fa-sliders text-sm"></i>
+            </button>
+            <button type="button" onclick="openEditBudgetModal()" title="Edit Monthly Budget" class="w-10 h-10 rounded-full bg-white border border-slate-200/90 text-slate-700 hover:text-slate-900 hover:bg-slate-50 flex items-center justify-center shadow-2xs transition-colors cursor-pointer">
+                <i class="fa-solid fa-pencil text-sm"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Month Selector Pill (Image 2) -->
+    <div class="flex justify-center">
+        <div class="inline-flex items-center bg-white border border-slate-200/90 rounded-full py-1.5 px-3 shadow-2xs">
+            <a href="/budgets?month={{ prev_month_str }}" title="Previous Month" class="w-7 h-7 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition-colors">
+                <i class="fa-solid fa-chevron-left text-xs"></i>
+            </a>
+            <span class="text-xs sm:text-sm font-bold text-slate-800 px-3 min-w-[130px] text-center">
+                {{ month_label }}
+            </span>
+            <a href="/budgets?month={{ next_month_str }}" title="Next Month" class="w-7 h-7 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition-colors">
+                <i class="fa-solid fa-chevron-right text-xs"></i>
+            </a>
+        </div>
+    </div>
+
+    <!-- Main Visual Card: Donut Chart with Category Pins (Image 2) -->
+    <div class="fin-card p-6 sm:p-8 flex flex-col items-center relative overflow-hidden">
+        
+        <!-- Interactive Donut Container -->
+        <div class="donut-container my-2">
+            <!-- SVG Donut Chart -->
+            <svg class="w-full h-full -rotate-90 transform" viewBox="0 0 100 100">
+                <!-- Background track -->
+                <circle cx="50" cy="50" r="38" fill="transparent" stroke="#F1F5F9" stroke-width="12"></circle>
+                
+                <!-- Category Arc Segments -->
+                {% set ns = namespace(offset=0) %}
+                {% set circumference = 2 * 3.14159265 * 38 %}
+                {% for cat in category_list %}
+                    {% set cat_pct = (cat.amount / total_spent) if total_spent > 0 else (cat.percentage / 100.0) %}
+                    {% set dash_len = cat_pct * circumference %}
+                    {% set space_len = circumference - dash_len %}
+                    <circle cx="50" cy="50" r="38" 
+                            fill="transparent" 
+                            stroke="{{ cat.color }}" 
+                            stroke-width="12"
+                            stroke-dasharray="{{ dash_len }} {{ space_len }}"
+                            stroke-dashoffset="{{ -ns.offset }}"
+                            stroke-linecap="round"
+                            class="transition-all duration-500 hover:opacity-90 cursor-pointer"
+                            onclick="selectCategory('{{ cat.name }}', '{{ user.currency_symbol }}{{ '%.2f'|format(cat.amount) }}', '{{ cat.percentage }}%', '{{ cat.color }}')"
+                    ></circle>
+                    {% set ns.offset = ns.offset + dash_len %}
+                {% endfor %}
+            </svg>
+
+            <!-- Category Pin Badges positioned along the circular ring -->
+            {% for cat in category_list %}
+            <div class="donut-pin" 
+                 style="--pin-bg: {{ cat.color }}; left: {{ cat.pin_x }}%; top: {{ cat.pin_y }}%;"
+                 title="{{ cat.name }}: {{ user.currency_symbol }}{{ '%.2f'|format(cat.amount) }} ({{ cat.percentage }}%)"
+                 onclick="selectCategory('{{ cat.name }}', '{{ user.currency_symbol }}{{ '%.2f'|format(cat.amount) }}', '{{ cat.percentage }}%', '{{ cat.color }}')">
+                <i class="{{ cat.icon }}"></i>
+            </div>
+            {% endfor %}
+
+            <!-- Center Donut Content -->
+            <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center">
+                <span class="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+                    {{ "%.0f"|format(percentage_spent) }}%
+                </span>
+                <span class="text-[11px] font-medium text-slate-400 flex items-center gap-1 mt-0.5">
+                    budget spent <i class="fa-regular fa-circle-question text-[10px]"></i>
+                </span>
+            </div>
+        </div>
+
+        <!-- Selected Category Tooltip / Inspector -->
+        <div id="category-inspect-card" class="hidden mt-2 p-2.5 px-4 bg-slate-50 border border-slate-200/80 rounded-2xl flex items-center gap-3 transition-all">
+            <span id="inspect-color-dot" class="w-3 h-3 rounded-full"></span>
+            <div>
+                <p id="inspect-cat-name" class="text-xs font-bold text-slate-900"></p>
+                <p class="text-[11px] text-slate-500">
+                    <span id="inspect-cat-amount" class="font-semibold text-slate-800"></span> · 
+                    <span id="inspect-cat-pct"></span> of total spent
+                </p>
+            </div>
+        </div>
+
+        <!-- Budget Amounts Details Below Donut -->
+        <div class="text-center mt-3 space-y-1">
+            <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+                {{ user.currency_symbol }}{{ "{:,.0f}".format(total_spent) }}
+            </h2>
+            <div class="flex items-center justify-center gap-1.5 text-xs text-slate-500 font-medium">
+                <span>of {{ user.currency_symbol }}{{ "{:,.0f}".format(user_budget) }} total budget</span>
+                <button type="button" onclick="openEditBudgetModal()" title="Edit Limit" class="text-slate-400 hover:text-slate-700 transition-colors cursor-pointer">
+                    <i class="fa-solid fa-pencil text-[11px]"></i>
+                </button>
+            </div>
+            <p class="text-[11px] text-slate-400 font-medium">
+                Tap any slice or icon to inspect category
+            </p>
+        </div>
+    </div>
+
+    <!-- Summary KPI Cards Row (Image 2) -->
+    <div class="grid grid-cols-2 gap-3 sm:gap-4">
+        <!-- Spent Card -->
+        <div class="fin-card p-4 sm:p-5 flex flex-col justify-between">
+            <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-[#0F172A]"></span>
+                <span class="text-xs font-semibold text-slate-500">Spent</span>
+            </div>
+            <p class="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight mt-2">
+                {{ user.currency_symbol }}{{ "{:,.0f}".format(total_spent) }}
+            </p>
+        </div>
+
+        <!-- Remaining Card -->
+        <div class="fin-card p-4 sm:p-5 flex flex-col justify-between">
+            <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-[#10B981]"></span>
+                <span class="text-xs font-semibold text-slate-500">Remaining</span>
+            </div>
+            <p class="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight mt-2">
+                {{ user.currency_symbol }}{{ "{:,.0f}".format(remaining_budget) }}
+            </p>
+        </div>
+    </div>
+
+    <!-- Category Breakdown Table / List -->
+    <div id="category-breakdown-list" class="fin-card p-5 space-y-4">
+        <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+            <h3 class="text-sm font-bold text-slate-900">Category Breakdown</h3>
+            <span class="text-xs text-slate-400 font-medium">{{ category_list|length }} Categories</span>
+        </div>
+
+        <div class="divide-y divide-slate-100">
+            {% for cat in category_list %}
+            <div class="py-3 flex items-center justify-between gap-3 hover:bg-slate-50/60 rounded-xl px-2 transition-colors">
+                <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center text-white text-sm shrink-0 shadow-2xs" style="background-color: {{ cat.color }};">
+                        <i class="{{ cat.icon }}"></i>
+                    </div>
+                    <div class="min-w-0">
+                        <p class="text-xs sm:text-sm font-bold text-slate-900 truncate">{{ cat.name }}</p>
+                        <div class="w-32 sm:w-44 bg-slate-100 h-1.5 rounded-full overflow-hidden mt-1">
+                            <div class="h-full rounded-full" style="width: {{ cat.percentage }}%; background-color: {{ cat.color }};"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-right shrink-0">
+                    <p class="text-xs sm:text-sm font-bold text-slate-900">
+                        {{ user.currency_symbol }}{{ "%.2f"|format(cat.amount) }}
+                    </p>
+                    <p class="text-[10px] text-slate-400 font-medium">{{ cat.percentage }}% of spent</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+</div>
+
+<!-- Edit Monthly Budget Modal -->
+<div id="edit-budget-modal" class="fixed inset-0 z-50 hidden transition-opacity duration-200">
+    <!-- Backdrop -->
+    <div onclick="closeEditBudgetModal()" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs"></div>
+
+    <div class="fixed inset-0 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl border border-slate-100 z-10 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center text-xs">
+                        <i class="fa-solid fa-pencil"></i>
+                    </div>
+                    <h3 class="text-sm font-bold text-slate-900">Set Monthly Budget</h3>
+                </div>
+                <button type="button" onclick="closeEditBudgetModal()" class="w-7 h-7 rounded-full bg-slate-100 text-slate-400 hover:text-slate-800 flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <form action="/budgets/update-limit" method="POST" class="space-y-4">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <input type="hidden" name="month" value="{{ current_month_str }}">
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1.5">Monthly Spending Limit ({{ user.currency_symbol }})</label>
+                    <div class="relative">
+                        <span class="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-slate-400">{{ user.currency_symbol }}</span>
+                        <input type="number" step="100" min="500" name="budget_limit" value="{{ '%.0f'|format(user_budget) }}" required
+                               class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-3 py-2.5 text-sm font-bold text-slate-900 focus:outline-none focus:border-slate-900 focus:bg-white transition-colors">
+                    </div>
+                    <p class="text-[11px] text-slate-400 mt-1">This sets your monthly target for calculating burn rate and insights.</p>
+                </div>
+
+                <div class="flex items-center gap-2 pt-2">
+                    <button type="button" onclick="closeEditBudgetModal()" class="flex-1 py-2.5 bg-slate-100 text-slate-600 rounded-xl font-semibold text-xs hover:bg-slate-200 transition-colors">
+                        Cancel
+                    </button>
+                    <button type="submit" class="flex-1 py-2.5 bg-[#0F172A] text-white rounded-xl font-bold text-xs hover:bg-slate-800 shadow-md shadow-slate-900/10 transition-all">
+                        Save Budget
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function selectCategory(name, amount, pct, color) {
+    const card = document.getElementById('category-inspect-card');
+    const nameEl = document.getElementById('inspect-cat-name');
+    const amtEl = document.getElementById('inspect-cat-amount');
+    const pctEl = document.getElementById('inspect-cat-pct');
+    const dot = document.getElementById('inspect-color-dot');
+
+    if (card && nameEl && amtEl && pctEl && dot) {
+        nameEl.textContent = name;
+        amtEl.textContent = amount;
+        pctEl.textContent = pct;
+        dot.style.backgroundColor = color;
+        card.classList.remove('hidden');
+    }
+}
+
+function openEditBudgetModal() {
+    const modal = document.getElementById('edit-budget-modal');
+    if (modal) modal.classList.remove('hidden');
+}
+
+function closeEditBudgetModal() {
+    const modal = document.getElementById('edit-budget-modal');
+    if (modal) modal.classList.add('hidden');
+}
+</script>
+{% endblock %}

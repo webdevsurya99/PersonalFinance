@@ -22,6 +22,15 @@ def init_db():
     """Create database tables and default admin if missing."""
     Base.metadata.create_all(bind=engine)
     
+    # Safe column migration for monthly_budget if missing
+    try:
+        from sqlalchemy import text
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE users ADD COLUMN monthly_budget FLOAT DEFAULT 25000.0"))
+            conn.commit()
+    except Exception:
+        pass
+
     db: Session = SessionLocal()
     try:
         admin_user = db.query(User).filter(User.is_admin == True).first()

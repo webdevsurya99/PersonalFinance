@@ -6,57 +6,57 @@
 <div class="max-w-2xl mx-auto space-y-6">
     <div class="flex items-center justify-between">
         <div>
-            <h2 class="text-2xl font-bold tracking-tight text-white">Edit Bank Account</h2>
-            <p class="text-xs sm:text-sm text-slate-400">Update account info or balance</p>
+            <h2 class="text-2xl font-black tracking-tight text-slate-900">Edit Bank Account</h2>
+            <p class="text-xs sm:text-sm text-slate-500">Update account info or balance</p>
         </div>
-        <a href="/accounts" class="text-xs text-slate-400 hover:text-white flex items-center gap-1.5">
+        <a href="/accounts" class="text-xs font-semibold text-slate-500 hover:text-slate-900 flex items-center gap-1.5 transition-colors">
             <i class="fa-solid fa-arrow-left"></i>
             <span>Back</span>
         </a>
     </div>
 
-    <div class="glass-card rounded-2xl p-6 border border-slate-800">
+    <div class="fin-card rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-sm">
         <form action="/accounts/bank/{{ bank.id }}/edit" method="POST" class="space-y-4">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-xs font-medium text-slate-300 mb-1">Bank Name *</label>
-                    <input type="text" name="bank_name" value="{{ bank.bank_name }}" required class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-blue-500">
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Bank Name *</label>
+                    <input type="text" name="bank_name" value="{{ bank.bank_name }}" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-sm focus:outline-none focus:border-slate-900 focus:bg-white shadow-xs">
                 </div>
                 <div>
-                    <label class="block text-xs font-medium text-slate-300 mb-1">Account Nickname *</label>
-                    <input type="text" name="account_name" value="{{ bank.account_name }}" required class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-blue-500">
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Account Nickname *</label>
+                    <input type="text" name="account_name" value="{{ bank.account_name }}" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-sm focus:outline-none focus:border-slate-900 focus:bg-white shadow-xs">
                 </div>
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-xs font-medium text-slate-300 mb-1">Account Last 4 Digits *</label>
-                    <input type="text" maxlength="4" pattern="\d{4}" name="account_number_last4" value="{{ bank.account_number_last4 }}" required class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-blue-500 font-mono">
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Account Last 4 Digits *</label>
+                    <input type="text" maxlength="4" pattern="\d{4}" name="account_number_last4" value="{{ bank.account_number_last4 }}" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-sm focus:outline-none focus:border-slate-900 focus:bg-white shadow-xs font-mono">
                 </div>
                 <div>
-                    <label class="block text-xs font-medium text-slate-300 mb-1">IFSC Code (Optional)</label>
-                    <input type="text" name="ifsc_code" value="{{ bank.ifsc_code or '' }}" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-blue-500 uppercase">
+                    <label class="block text-xs font-bold text-slate-700 mb-1">IFSC Code (Optional)</label>
+                    <input type="text" name="ifsc_code" value="{{ bank.ifsc_code or '' }}" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-sm focus:outline-none focus:border-slate-900 focus:bg-white shadow-xs uppercase">
                 </div>
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-xs font-medium text-slate-300 mb-1">Current Balance ({{ user.currency_symbol }}) *</label>
-                    <input type="number" step="0.01" name="current_balance" value="{{ bank.current_balance }}" required class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white font-bold text-sm focus:outline-none focus:border-blue-500">
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Current Balance ({{ user.currency_symbol }}) *</label>
+                    <input type="number" step="0.01" name="current_balance" value="{{ bank.current_balance }}" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-extrabold text-sm focus:outline-none focus:border-slate-900 focus:bg-white shadow-xs">
                 </div>
                 <div>
-                    <label class="block text-xs font-medium text-slate-300 mb-1">Brand Color Accent</label>
-                    <input type="color" name="color" value="{{ bank.color }}" class="w-full h-11 bg-slate-900 border border-slate-700 rounded-xl p-1 cursor-pointer">
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Brand Color Accent</label>
+                    <input type="color" name="color" value="{{ bank.color }}" class="w-full h-11 bg-slate-50 border border-slate-200 rounded-xl p-1 cursor-pointer">
                 </div>
             </div>
 
-            <div class="pt-4 flex items-center justify-end gap-3">
-                <a href="/accounts" class="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold">
+            <div class="pt-4 flex items-center justify-end gap-3 border-t border-slate-100">
+                <a href="/accounts" class="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors">
                     Cancel
                 </a>
-                <button type="submit" class="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-lg shadow-blue-600/30 cursor-pointer">
+                <button type="submit" class="px-6 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shadow-sm cursor-pointer transition-colors">
                     Save Changes
                 </button>
             </div>

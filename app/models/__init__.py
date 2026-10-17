@@ -19,6 +19,7 @@ class User(Base):
     is_admin = Column(Boolean, default=False, nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
     currency_symbol = Column(String(10), default="₹", nullable=False)
+    monthly_budget = Column(Float, default=25000.0, nullable=True)
     created_at = Column(DateTime, default=utcnow_naive, nullable=False)
     updated_at = Column(DateTime, default=utcnow_naive, onupdate=utcnow_naive, nullable=False)
 

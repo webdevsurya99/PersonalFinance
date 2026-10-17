@@ -3,119 +3,112 @@
 {% block title %}Dashboard - FinMinimal{% endblock %}
 
 {% block content %}
-<div class="space-y-6">
+<div class="space-y-6 max-w-4xl mx-auto">
 
-    <!-- Top Greeting & Time Period Selector -->
-    <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+    <!-- Mobile / Top Greeting (Image 1) -->
+    <div class="flex items-center justify-between">
         <div>
-            <h2 class="text-2xl font-bold tracking-tight text-white">Hello, {{ user.full_name.split(' ')[0] }} 👋</h2>
-            <p class="text-xs sm:text-sm text-slate-400">
-                Here is your financial summary for 
-                <span class="text-blue-400 font-semibold">{{ start_date.strftime('%d %b') }} – {{ end_date.strftime('%d %b %Y') }}</span>
+            <p class="text-xs sm:text-sm font-medium text-slate-500">
+                {{ greeting }}
+                <span class="text-slate-400 text-xs ml-1 font-normal">({{ start_date.strftime('%d %b') }} – {{ end_date.strftime('%d %b %Y') }})</span>
                 {% if period == 'custom' %}
-                <span class="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 ml-1">
-                    <i class="fa-solid fa-sliders text-[10px]"></i> Custom Range
+                <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 ml-1">
+                    <i class="fa-solid fa-sliders text-[9px]"></i> Custom Range
                 </span>
                 {% endif %}
             </p>
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+                <span>{{ user.full_name.split(' ')[0] }}</span>
+                <span>👋</span>
+            </h1>
         </div>
 
-        <!-- Time Period Pills & Custom Range Trigger -->
-        <div class="relative inline-flex items-center">
-            <div class="flex items-center gap-1.5 p-1 bg-slate-900/90 rounded-2xl border border-slate-800 overflow-x-auto shrink-0 max-w-full">
-                <a href="/dashboard?period=this_month" class="px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all {% if period == 'this_month' %}bg-blue-600 text-white shadow-sm{% else %}text-slate-400 hover:text-white hover:bg-slate-800/60{% endif %}">
-                    This Month
-                </a>
-                <a href="/dashboard?period=last_month" class="px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all {% if period == 'last_month' %}bg-blue-600 text-white shadow-sm{% else %}text-slate-400 hover:text-white hover:bg-slate-800/60{% endif %}">
-                    Last Month
-                </a>
-                <a href="/dashboard?period=last_30_days" class="px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all {% if period == 'last_30_days' %}bg-blue-600 text-white shadow-sm{% else %}text-slate-400 hover:text-white hover:bg-slate-800/60{% endif %}">
-                    30 Days
-                </a>
-                <a href="/dashboard?period=this_year" class="px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all {% if period == 'this_year' %}bg-blue-600 text-white shadow-sm{% else %}text-slate-400 hover:text-white hover:bg-slate-800/60{% endif %}">
-                    This Year
-                </a>
-                
-                <!-- Custom Range Trigger Button -->
-                <button type="button" onclick="toggleCustomDateDropdown(event)" id="custom-date-btn" class="px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer {% if period == 'custom' %}bg-blue-600 text-white shadow-sm{% else %}text-slate-400 hover:text-white hover:bg-slate-800/60{% endif %}">
-                    <i class="fa-regular fa-calendar-days text-[11px]"></i>
-                    <span>Custom</span>
-                    {% if period == 'custom' %}
-                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                    {% endif %}
-                    <i class="fa-solid fa-chevron-down text-[9px] opacity-70 ml-0.5"></i>
-                </button>
-            </div>
-
-            <!-- Custom Date Range Popover Card -->
-            <div id="custom-date-popover" class="hidden absolute right-0 top-full mt-2 z-50 w-[320px] sm:w-[360px] glass-card p-4 rounded-2xl border border-slate-700 shadow-2xl bg-slate-900/95 backdrop-blur-xl text-left">
-                <div class="flex items-center justify-between pb-2.5 border-b border-slate-800">
-                    <h4 class="text-xs font-bold text-white flex items-center gap-2">
-                        <i class="fa-regular fa-calendar-days text-blue-400"></i>
-                        <span>Select Date Range</span>
-                    </h4>
-                    <button type="button" onclick="closeCustomDateDropdown()" class="w-6 h-6 rounded-lg bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center text-xs">
-                        <i class="fa-solid fa-xmark"></i>
-                    </button>
-                </div>
-
-                <!-- Quick Presets -->
-                <div class="mt-2.5">
-                    <label class="text-[10px] uppercase font-bold text-slate-400 tracking-wider block mb-1">Quick Shortcuts</label>
-                    <div class="grid grid-cols-3 gap-1.5">
-                        <button type="button" onclick="setDashboardQuickRange(7)" class="px-2 py-1 bg-slate-800/80 hover:bg-slate-700 text-[11px] rounded-lg text-slate-300 font-medium transition-colors">Last 7 Days</button>
-                        <button type="button" onclick="setDashboardQuickRange(14)" class="px-2 py-1 bg-slate-800/80 hover:bg-slate-700 text-[11px] rounded-lg text-slate-300 font-medium transition-colors">Last 14 Days</button>
-                        <button type="button" onclick="setDashboardQuickRange(60)" class="px-2 py-1 bg-slate-800/80 hover:bg-slate-700 text-[11px] rounded-lg text-slate-300 font-medium transition-colors">Last 60 Days</button>
-                        <button type="button" onclick="setDashboardQuickRange(90)" class="px-2 py-1 bg-slate-800/80 hover:bg-slate-700 text-[11px] rounded-lg text-slate-300 font-medium transition-colors">Last 90 Days</button>
-                        <button type="button" onclick="setDashboardQuickRange('mtd')" class="px-2 py-1 bg-slate-800/80 hover:bg-slate-700 text-[11px] rounded-lg text-slate-300 font-medium transition-colors">Month to Date</button>
-                        <button type="button" onclick="setDashboardQuickRange('ytd')" class="px-2 py-1 bg-slate-800/80 hover:bg-slate-700 text-[11px] rounded-lg text-slate-300 font-medium transition-colors">Year to Date</button>
-                    </div>
-                </div>
-
-                <!-- Date Inputs Form -->
-                <form action="/dashboard" method="GET" class="mt-3 space-y-3">
-                    <input type="hidden" name="period" value="custom">
-                    <div class="grid grid-cols-2 gap-2">
-                        <div>
-                            <label class="text-[10px] uppercase font-bold text-slate-400 tracking-wider block mb-1">Start Date</label>
-                            <input type="date" name="start_date" id="dash-custom-start" value="{{ custom_start_str }}" required class="w-full bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500">
-                        </div>
-                        <div>
-                            <label class="text-[10px] uppercase font-bold text-slate-400 tracking-wider block mb-1">End Date</label>
-                            <input type="date" name="end_date" id="dash-custom-end" value="{{ custom_end_str }}" required class="w-full bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500">
-                        </div>
-                    </div>
-
-                    <div class="flex items-center gap-2 pt-1">
-                        <button type="button" onclick="closeCustomDateDropdown()" class="flex-1 py-1.5 px-3 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold hover:bg-slate-700 transition-colors">
-                            Cancel
-                        </button>
-                        <button type="submit" class="flex-1 py-1.5 px-3 rounded-xl bg-blue-600 text-white text-xs font-semibold hover:bg-blue-500 shadow-lg shadow-blue-500/20 transition-all flex items-center justify-center gap-1.5">
-                            <i class="fa-solid fa-check text-[11px]"></i>
-                            <span>Apply Range</span>
-                        </button>
-                    </div>
-                </form>
-            </div>
+        <!-- Optional Desktop Period Pills -->
+        <div class="hidden lg:flex items-center gap-1 bg-white border border-slate-200/90 rounded-2xl p-1 shadow-2xs">
+            <a href="/dashboard?period=this_month" class="px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all {% if period == 'this_month' %}bg-[#0F172A] text-white shadow-xs{% else %}text-slate-500 hover:text-slate-900 hover:bg-slate-50{% endif %}">
+                This Month
+            </a>
+            <a href="/dashboard?period=last_month" class="px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all {% if period == 'last_month' %}bg-[#0F172A] text-white shadow-xs{% else %}text-slate-500 hover:text-slate-900 hover:bg-slate-50{% endif %}">
+                Last Month
+            </a>
+            <a href="/dashboard?period=last_30_days" class="px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all {% if period == 'last_30_days' %}bg-[#0F172A] text-white shadow-xs{% else %}text-slate-500 hover:text-slate-900 hover:bg-slate-50{% endif %}">
+                30 Days
+            </a>
+            <a href="/dashboard?period=this_year" class="px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all {% if period == 'this_year' %}bg-[#0F172A] text-white shadow-xs{% else %}text-slate-500 hover:text-slate-900 hover:bg-slate-50{% endif %}">
+                This Year
+            </a>
         </div>
     </div>
 
-    <!-- Credit Card Billing & Due Date Alerts Banner (Requirement 5) -->
+    <!-- Total Balance Section with Eye Toggle (Image 1) -->
+    <div class="space-y-1">
+        <div class="flex items-center justify-between">
+            <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Balance</p>
+            <div class="flex items-center gap-1.5 text-[11px] font-medium text-slate-400">
+                <span>Live Balance</span>
+                <span>&bull;</span>
+                <span title="Bank Balance − CC Due">Banks − CC Due</span>
+                <span class="text-[10px] font-bold px-1.5 py-0.2 rounded-full {% if live_balance >= 0 %}bg-emerald-50 text-emerald-700 border border-emerald-200{% else %}bg-rose-50 text-rose-700 border border-rose-200{% endif %}">
+                    {% if live_balance >= 0 %}Net +{% else %}Net -{% endif %}
+                </span>
+            </div>
+        </div>
+        <div class="flex items-center gap-3">
+            <span id="masked-total-balance" class="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
+                {{ user.currency_symbol }}••••••
+            </span>
+            <span id="real-total-balance" class="hidden text-3xl sm:text-4xl font-black text-slate-900 tracking-tight" data-raw-balance="{{ '%.2f'|format(live_balance) }}">
+                {{ user.currency_symbol }} {{ "%.2f"|format(live_balance) }}
+            </span>
+            <button type="button" onclick="toggleBalanceMask()" title="Hide / Reveal Balance" class="w-9 h-9 rounded-full bg-white border border-slate-200/90 text-slate-400 hover:text-slate-800 flex items-center justify-center shadow-2xs transition-colors cursor-pointer active:scale-95">
+                <i id="balance-eye-icon" class="fa-regular fa-eye-slash text-sm"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Quick Action Buttons Row (Image 1: Voice, Transfer, Scan) -->
+    <div class="grid grid-cols-3 gap-4 max-w-sm mx-auto sm:mx-0 pt-2 pb-2">
+        <!-- Voice Button -->
+        <div class="flex flex-col items-center gap-2">
+            <button type="button" onclick="openVoiceLogModal()" class="w-14 h-14 rounded-full bg-[#0F172A] text-white flex items-center justify-center shadow-md shadow-slate-900/20 hover:bg-slate-800 active:scale-95 transition-all cursor-pointer">
+                <i class="fa-solid fa-microphone text-lg"></i>
+            </button>
+            <span class="text-xs font-semibold text-slate-600">Voice</span>
+        </div>
+
+        <!-- Transfer Button -->
+        <div class="flex flex-col items-center gap-2">
+            <button type="button" onclick="openLogModal('transfer')" class="w-14 h-14 rounded-full bg-white text-slate-800 border border-slate-200/90 flex items-center justify-center shadow-2xs hover:bg-slate-50 active:scale-95 transition-all cursor-pointer">
+                <i class="fa-solid fa-arrow-right text-lg"></i>
+            </button>
+            <span class="text-xs font-semibold text-slate-600">Transfer</span>
+        </div>
+
+        <!-- Scan Button -->
+        <div class="flex flex-col items-center gap-2">
+            <button type="button" onclick="openScanModal()" class="w-14 h-14 rounded-full bg-white text-slate-800 border border-slate-200/90 flex items-center justify-center shadow-2xs hover:bg-slate-50 active:scale-95 transition-all cursor-pointer">
+                <i class="fa-solid fa-expand text-lg"></i>
+            </button>
+            <span class="text-xs font-semibold text-slate-600">Scan</span>
+        </div>
+    </div>
+
+    <!-- Due Date Reminder Alerts (If cards due within 7 days) -->
     {% if due_card_alerts %}
     <div class="space-y-2">
         {% for alert in due_card_alerts %}
         {% if alert.days_to_due <= 7 %}
-        <div class="p-3.5 rounded-2xl flex items-center justify-between gap-3 border {% if alert.urgency == 'danger' %}bg-rose-500/10 border-rose-500/30 text-rose-300{% else %}bg-amber-500/10 border-amber-500/30 text-amber-300{% endif %}">
+        <div class="p-3.5 rounded-2xl flex items-center justify-between gap-3 border {% if alert.urgency == 'danger' %}bg-rose-50 border-rose-200 text-rose-800{% else %}bg-amber-50 border-amber-200 text-amber-800{% endif %}">
             <div class="flex items-center gap-3">
-                <div class="w-8 h-8 rounded-xl {% if alert.urgency == 'danger' %}bg-rose-500/20 text-rose-400{% else %}bg-amber-500/20 text-amber-400{% endif %} flex items-center justify-center shrink-0">
-                    <i class="fa-solid fa-credit-card text-sm"></i>
+                <div class="w-8 h-8 rounded-xl {% if alert.urgency == 'danger' %}bg-rose-500 text-white{% else %}bg-amber-500 text-white{% endif %} flex items-center justify-center shrink-0 text-xs">
+                    <i class="fa-solid fa-credit-card"></i>
                 </div>
                 <div>
-                    <p class="text-xs font-bold text-white">Payment Reminder: {{ alert.card_name }} (••{{ alert.last_4 }})</p>
-                    <p class="text-[11px] opacity-90">{{ alert.status_text }} on <b>{{ alert.next_due_date.strftime('%d %B %Y') }}</b> (Bill: {{ alert.next_billing_date.strftime('%d %b') }})</p>
+                    <p class="text-xs font-bold">{{ alert.card_name }} (••{{ alert.last_4 }}) Due Soon</p>
+                    <p class="text-[11px] opacity-80">{{ alert.status_text }} on <b>{{ alert.next_due_date.strftime('%d %B %Y') }}</b></p>
                 </div>
             </div>
-            <a href="/accounts" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/80 hover:bg-slate-900 text-white shrink-0 border border-slate-700">
+            <a href="/accounts" class="px-3 py-1 bg-white hover:bg-slate-50 text-xs font-bold rounded-xl border border-slate-200 shadow-2xs shrink-0">
                 View Card
             </a>
         </div>
@@ -124,245 +117,353 @@
     </div>
     {% endif %}
 
-    <!-- Top KPI Summary Cards -->
-    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
-        
-        <!-- Live Net Balance (All Banks - CC Outstanding) -->
-        <div class="glass-card p-4 sm:p-5 rounded-2xl border {% if live_balance >= 0 %}border-emerald-500/30 bg-gradient-to-br from-emerald-950/20 via-slate-900/80 to-slate-900/90{% else %}border-rose-500/30 bg-gradient-to-br from-rose-950/20 via-slate-900/80 to-slate-900/90{% endif %} flex flex-col justify-between relative overflow-hidden group shadow-lg">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center gap-1.5">
-                    <span class="text-xs font-semibold text-slate-300 uppercase tracking-wider">Live Balance</span>
-                    <span class="text-[10px] font-bold px-1.5 py-0.5 rounded-full {% if live_balance >= 0 %}bg-emerald-500/20 text-emerald-300 border border-emerald-500/30{% else %}bg-rose-500/20 text-rose-300 border border-rose-500/30{% endif %}">
-                        {% if live_balance >= 0 %}Net +{% else %}Net -{% endif %}
-                    </span>
-                </div>
-                <div class="w-8 h-8 rounded-xl {% if live_balance >= 0 %}bg-emerald-500/20 text-emerald-400{% else %}bg-rose-500/20 text-rose-400{% endif %} flex items-center justify-center text-xs shadow-inner">
-                    <i class="fa-solid fa-scale-balanced"></i>
-                </div>
-            </div>
-            <div class="mt-3">
-                <h3 id="kpi-live-balance" class="text-lg sm:text-2xl font-black {% if live_balance >= 0 %}text-emerald-400{% else %}text-rose-400{% endif %} tracking-tight">
-                    {{ user.currency_symbol }} {{ "%.2f"|format(live_balance) }}
-                </h3>
-                <div class="text-[11px] text-slate-400 font-medium flex items-center gap-1 mt-0.5 truncate" title="Bank Balance ({{ user.currency_symbol }}{{ '%.2f'|format(total_bank_balance) }}) − CC Outstanding ({{ user.currency_symbol }}{{ '%.2f'|format(total_credit_used) }})">
-                    <span>Banks − CC Due</span>
-                    <span class="text-slate-500 font-mono text-[10px]">({{ user.currency_symbol }}{{ "%.0f"|format(total_bank_balance) }} - {{ user.currency_symbol }}{{ "%.0f"|format(total_credit_used) }})</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- Bank Balance (Liquid Balance) -->
-        <div class="glass-card p-4 sm:p-5 rounded-2xl border border-slate-800 flex flex-col justify-between">
-            <div class="flex items-center justify-between">
-                <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Bank Balance</span>
-                <div class="w-8 h-8 rounded-xl bg-indigo-500/15 text-indigo-400 flex items-center justify-center text-xs">
-                    <i class="fa-solid fa-building-columns"></i>
-                </div>
-            </div>
-            <div class="mt-3">
-                <h3 class="text-lg sm:text-2xl font-extrabold text-white tracking-tight">{{ user.currency_symbol }} {{ "%.2f"|format(total_bank_balance) }}</h3>
-                <span class="text-[11px] text-slate-400 font-medium">Across {{ bank_accounts|length }} bank account{{ 's' if bank_accounts|length != 1 else '' }}</span>
-            </div>
-        </div>
-
-        <!-- Total Income -->
-        <div class="glass-card p-4 sm:p-5 rounded-2xl border border-slate-800 flex flex-col justify-between">
-            <div class="flex items-center justify-between">
-                <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Income</span>
-                <div class="w-8 h-8 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center text-xs">
-                    <i class="fa-solid fa-arrow-trend-up"></i>
-                </div>
-            </div>
-            <div class="mt-3">
-                <h3 id="kpi-total-income" class="text-lg sm:text-2xl font-extrabold text-white tracking-tight">{{ user.currency_symbol }} {{ "%.2f"|format(total_income) }}</h3>
-                <span class="text-[11px] text-emerald-400 font-medium">Inflows recorded</span>
-            </div>
-        </div>
-
-        <!-- Total Expenses -->
-        <div class="glass-card p-4 sm:p-5 rounded-2xl border border-slate-800 flex flex-col justify-between">
-            <div class="flex items-center justify-between">
-                <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Expenses</span>
-                <div class="w-8 h-8 rounded-xl bg-rose-500/15 text-rose-400 flex items-center justify-center text-xs">
-                    <i class="fa-solid fa-arrow-trend-down"></i>
-                </div>
-            </div>
-            <div class="mt-3">
-                <h3 id="kpi-total-expense" class="text-lg sm:text-2xl font-extrabold text-white tracking-tight">{{ user.currency_symbol }} {{ "%.2f"|format(total_expense) }}</h3>
-                <span class="text-[11px] text-rose-400 font-medium">Outflows recorded</span>
-            </div>
-        </div>
-
-        <!-- Net Savings -->
-        <div class="glass-card p-4 sm:p-5 rounded-2xl border border-slate-800 flex flex-col justify-between col-span-2 md:col-span-1">
-            <div class="flex items-center justify-between">
-                <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Net Savings</span>
-                <div class="w-8 h-8 rounded-xl {% if net_savings >= 0 %}bg-blue-500/15 text-blue-400{% else %}bg-rose-500/15 text-rose-400{% endif %} flex items-center justify-center text-xs">
-                    <i class="fa-solid fa-piggy-bank"></i>
-                </div>
-            </div>
-            <div class="mt-3">
-                <h3 id="kpi-net-savings" class="text-lg sm:text-2xl font-extrabold {% if net_savings >= 0 %}text-emerald-400{% else %}text-rose-400{% endif %} tracking-tight">
-                    {{ user.currency_symbol }} {{ "%.2f"|format(net_savings) }}
-                </h3>
-                <span id="kpi-savings-rate" class="text-[11px] text-slate-400 font-medium">Savings Rate: {{ savings_rate }}%</span>
-            </div>
-        </div>
-
-    </div>
-
-    <!-- Charts Section (Requirement 6) -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        <!-- Category Doughnut Breakdown -->
-        <div class="glass-card rounded-2xl p-5 border border-slate-800 flex flex-col justify-between">
-            <div class="flex items-center justify-between mb-3">
-                <h3 class="font-bold text-sm text-white flex items-center gap-2">
-                    <i class="fa-solid fa-chart-pie text-blue-400"></i>
-                    <span>Expenses by Category</span>
-                </h3>
-                <a href="/categories" class="text-xs text-blue-400 hover:underline">Manage</a>
-            </div>
-            
-            <div class="relative flex-1 min-h-[240px] flex items-center justify-center">
-                <canvas id="categoryExpenseChart"></canvas>
-                <div id="no-cat-data-msg" class="text-center text-slate-500 text-xs hidden">
-                    <i class="fa-regular fa-folder-open text-2xl mb-1 block"></i>
-                    No expense data in this period
-                </div>
-            </div>
-        </div>
-
-        <!-- Cash Flow & Daily Trend Bar Chart -->
-        <div class="lg:col-span-2 glass-card rounded-2xl p-5 border border-slate-800 flex flex-col justify-between">
-            <div class="flex items-center justify-between mb-3">
-                <h3 class="font-bold text-sm text-white flex items-center gap-2">
-                    <i class="fa-solid fa-chart-simple text-emerald-400"></i>
-                    <span>Income vs Expense Activity</span>
-                </h3>
-                <span class="text-xs text-slate-400">{{ start_date.strftime('%b %Y') }}</span>
-            </div>
-            
-            <div class="relative flex-1 min-h-[240px]">
-                <canvas id="trendSpendingChart"></canvas>
-            </div>
-        </div>
-
-    </div>
-
-    <!-- Active Trips & Quick Widgets -->
-    {% if active_trips %}
+    <!-- My Wallet Section (Image 1) -->
     <div class="space-y-3">
+        <!-- Wallet Header with Actions -->
         <div class="flex items-center justify-between">
-            <h3 class="font-bold text-sm text-white flex items-center gap-2">
-                <i class="fa-solid fa-plane-departure text-cyan-400"></i>
-                <span>Active Trips & Vacations</span>
-            </h3>
-            <a href="/trips" class="text-xs text-blue-400 hover:underline">View All Trips</a>
+            <h2 class="text-lg font-extrabold text-slate-900 tracking-tight">My Wallet</h2>
+            <div class="flex items-center gap-2">
+                <button type="button" onclick="toggleWalletCardBalance()" title="Hide Card Amount" class="w-8 h-8 rounded-full bg-white border border-slate-200/90 text-slate-500 hover:text-slate-900 flex items-center justify-center shadow-2xs transition-colors cursor-pointer">
+                    <i id="wallet-card-eye-icon" class="fa-regular fa-eye-slash text-xs"></i>
+                </button>
+                <a href="/accounts" title="Manage Accounts & Cards" class="w-8 h-8 rounded-full bg-white border border-slate-200/90 text-slate-500 hover:text-slate-900 flex items-center justify-center shadow-2xs transition-colors">
+                    <i class="fa-solid fa-ellipsis text-xs"></i>
+                </a>
+            </div>
         </div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {% for trip in active_trips %}
-            {% set trip_spent = trip.transactions | selectattr('type', 'equalto', 'expense') | map(attribute='amount') | sum %}
-            {% set trip_pct = (trip_spent / trip.budget * 100) if trip.budget > 0 else 0 %}
-            <a href="/trips/{{ trip.id }}" class="glass-card p-4 rounded-2xl border border-slate-800 hover:border-slate-700 transition-all block group">
+
+        <!-- Stacked Realistic Wallet Cards Carousel (Image 1) -->
+        <div class="relative pt-2 pb-1">
+            <!-- Background Stacked Card 2 (Peek behind right) -->
+            <div class="absolute right-2 top-0 w-[88%] h-[185px] sm:h-[210px] wallet-card-peek-2 -rotate-1 rounded-2xl pointer-events-none"></div>
+
+            <!-- Background Stacked Card 1 (Peek behind right) -->
+            <div class="absolute right-5 top-1 w-[92%] h-[185px] sm:h-[210px] wallet-card-peek rotate-1 rounded-2xl pointer-events-none"></div>
+
+            <!-- Front Active Physical Card -->
+            <div id="active-wallet-card" class="wallet-card-main p-5 sm:p-6 rounded-2xl w-full sm:w-[94%] min-h-[190px] sm:min-h-[215px] flex flex-col justify-between z-10 relative">
+                <!-- Top Card Row -->
                 <div class="flex items-center justify-between">
-                    <h4 class="font-bold text-sm text-white group-hover:text-blue-400 transition-colors">{{ trip.name }}</h4>
-                    <span class="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">{{ trip.status }}</span>
-                </div>
-                <p class="text-xs text-slate-400 mt-0.5"><i class="fa-solid fa-location-dot text-[10px] mr-1 text-rose-400"></i>{{ trip.destination }} &bull; {{ trip.start_date.strftime('%d %b') }}</p>
-                <div class="mt-3">
-                    <div class="flex items-center justify-between text-xs mb-1">
-                        <span class="text-slate-400">Spent: <b class="text-white">{{ user.currency_symbol }}{{ "%.2f"|format(trip_spent) }}</b></span>
-                        <span class="text-slate-400">Budget: {{ user.currency_symbol }}{{ "%.2f"|format(trip.budget) }}</span>
-                    </div>
-                    <div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
-                        <div class="h-2 rounded-full {% if trip_pct > 100 %}bg-rose-500{% elif trip_pct > 80 %}bg-amber-500{% else %}bg-cyan-500{% endif %}" style="width: {{ [trip_pct, 100]|min }}%"></div>
-                    </div>
-                </div>
-            </a>
-            {% endfor %}
-        </div>
-    </div>
-    {% endif %}
-
-    <!-- Recent Transactions Table -->
-    <div class="glass-card rounded-2xl border border-slate-800 overflow-hidden">
-        <div class="p-4 sm:p-5 border-b border-slate-800 flex items-center justify-between">
-            <h3 class="font-bold text-base text-white flex items-center gap-2">
-                <i class="fa-solid fa-receipt text-blue-400"></i>
-                <span>Recent Transactions</span>
-            </h3>
-            <a href="/transactions" class="text-xs font-semibold text-blue-400 hover:underline flex items-center gap-1">
-                <span>View Full Log</span>
-                <i class="fa-solid fa-arrow-right text-[10px]"></i>
-            </a>
-        </div>
-
-        {% if recent_transactions %}
-        <div class="divide-y divide-slate-800/80">
-            {% for t in recent_transactions %}
-            <div class="p-3.5 sm:p-4 flex items-center justify-between hover:bg-slate-800/30 transition-colors">
-                <div class="flex items-center gap-3 min-w-0">
-                    <!-- Category Icon Badge -->
-                    <div class="w-10 h-10 rounded-2xl flex items-center justify-center text-lg shrink-0" style="background-color: {{ t.category.color if t.category else '#334155' }}20; color: {{ t.category.color if t.category else '#94A3B8' }};">
-                        <span>{{ t.category.icon if t.category else '📦' }}</span>
-                    </div>
-                    <div class="min-w-0">
-                        <div class="flex items-center gap-2 flex-wrap">
-                            <p class="font-semibold text-sm text-white truncate">{{ t.category.name if t.category else 'General' }}</p>
-                            {% if t.trip %}
-                            <span class="text-[10px] font-medium bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 px-2 py-0.2 rounded-full">
-                                ✈️ {{ t.trip.name }}
-                            </span>
-                            {% endif %}
-                            {% if t.tag %}
-                            <span class="text-[10px] text-slate-400 bg-slate-800 px-1.5 py-0.2 rounded">{{ t.tag }}</span>
-                            {% endif %}
+                    <div class="flex items-center gap-2">
+                        <div class="w-7 h-7 rounded-full bg-white/15 border border-white/20 flex items-center justify-center text-xs text-white">
+                            <i class="fa-solid fa-shield-halved text-[11px]"></i>
                         </div>
-                        <div class="flex items-center gap-2 text-xs text-slate-400 mt-0.5">
-                            <span>{{ t.date.strftime('%d %b %Y') }}</span>
-                            <span>&bull;</span>
-                            {% if t.bank_account %}
-                            <span>🏦 {{ t.bank_account.bank_name }} (••{{ t.bank_account.account_number_last4 }})</span>
-                            {% elif t.credit_card %}
-                            <span>💳 {{ t.credit_card.card_name }} (••{{ t.credit_card.last_4_digits }})</span>
-                            {% else %}
-                            <span>Cash / Direct</span>
-                            {% endif %}
-                        </div>
+                        <span id="active-card-title" class="font-bold text-xs tracking-wide uppercase text-white/90">
+                            {{ bank_accounts[0].bank_name if bank_accounts else ("Credit Card" if credit_cards else "Main Wallet") }}
+                        </span>
+                    </div>
+
+                    <!-- Contactless Icon -->
+                    <div class="text-white/80">
+                        <i class="fa-solid fa-wifi rotate-90 text-sm"></i>
                     </div>
                 </div>
 
-                <!-- Amount -->
-                <div class="text-right shrink-0 pl-3">
-                    <p class="font-bold text-sm sm:text-base {% if t.type == 'income' %}text-emerald-400{% else %}text-rose-400{% endif %}">
-                        {{ '+' if t.type == 'income' else '-' }} {{ user.currency_symbol }} {{ "%.2f"|format(t.amount) }}
+                <!-- Middle Card Row: Balance & Account Type -->
+                <div class="my-3">
+                    <div class="flex items-baseline gap-1">
+                        <span id="wallet-card-masked-amt" class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+                            {{ user.currency_symbol }}•••••
+                        </span>
+                        <span id="wallet-card-real-amt" class="hidden text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+                            {{ user.currency_symbol }} {{ "{:,.2f}".format(bank_accounts[0].current_balance if bank_accounts else (credit_cards[0].available_limit if credit_cards else live_balance)) }}
+                        </span>
+                    </div>
+                    <p id="active-card-type" class="text-[10px] tracking-widest uppercase font-semibold text-white/70 mt-0.5">
+                        {{ "CASH ACCOUNT" if bank_accounts else "CREDIT CARD" }}
                     </p>
-                    {% if t.remarks %}
-                    <p class="text-[11px] text-slate-400 truncate max-w-[140px]">{{ t.remarks }}</p>
-                    {% endif %}
+                </div>
+
+                <!-- Bottom Card Row: Card Number & Interlocking Logo -->
+                <div class="flex items-center justify-between pt-1">
+                    <div class="font-mono text-xs sm:text-sm tracking-wider text-white/80">
+                        •••• •••• <span id="active-card-digits">{{ bank_accounts[0].account_number_last4 if bank_accounts else (credit_cards[0].last_4_digits if credit_cards else "5274 5678") }}</span>
+                    </div>
+
+                    <!-- Mastercard Interlocking Circles Logo -->
+                    <div class="mastercard-circles">
+                        <div class="mastercard-circle-left"></div>
+                        <div class="mastercard-circle-right"></div>
+                    </div>
                 </div>
             </div>
-            {% endfor %}
+
+            <!-- Dot Indicators (Image 1: • • •) -->
+            <div class="flex justify-center items-center gap-1.5 mt-3">
+                <button type="button" onclick="switchCardSlide(0)" class="card-dot w-2 h-2 rounded-full bg-[#0F172A] transition-all"></button>
+                <button type="button" onclick="switchCardSlide(1)" class="card-dot w-1.5 h-1.5 rounded-full bg-slate-300 transition-all"></button>
+                <button type="button" onclick="switchCardSlide(2)" class="card-dot w-1.5 h-1.5 rounded-full bg-slate-300 transition-all"></button>
+            </div>
         </div>
-        {% else %}
-        <div class="p-8 text-center text-slate-400 text-xs">
-            <i class="fa-solid fa-receipt text-3xl mb-2 text-slate-600 block"></i>
-            <p>No transactions logged in this time period.</p>
-            <button onclick="openLogModal('expense')" class="mt-3 px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-semibold cursor-pointer">
-                Lodge First Expense
-            </button>
+    </div>
+
+    <!-- Latest Transactions Section (Image 1) -->
+    <div class="space-y-3 pt-2">
+        <!-- Section Header -->
+        <div class="flex items-center justify-between">
+            <h2 class="text-lg font-extrabold text-slate-900 tracking-tight">Latest Transactions</h2>
+            <a href="/transactions" class="text-xs font-bold text-slate-400 hover:text-slate-700 transition-colors">
+                See all
+            </a>
         </div>
-        {% endif %}
+
+        <!-- Transactions List Items -->
+        <div class="space-y-2.5">
+            {% if recent_transactions %}
+                {% for txn in recent_transactions %}
+                <div class="fin-card fin-card-hover p-3.5 sm:p-4 flex items-center justify-between gap-3">
+                    <!-- Left: Squircle Icon -->
+                    <div class="flex items-center gap-3.5 min-w-0">
+                        <div class="category-squircle" 
+                             style="background-color: {% if txn.category and txn.category.color and txn.category.color != '#6366F1' %}{{ txn.category.color }}{% elif txn.type == 'income' %}#10B981{% elif 'food' in (txn.remarks or '')|lower or 'dine' in (txn.remarks or '')|lower %}#F97316{% elif 'uber' in (txn.remarks or '')|lower or 'cab' in (txn.remarks or '')|lower %}#06B6D4{% elif loop.index % 4 == 1 %}#F97316{% elif loop.index % 4 == 2 %}#06B6D4{% elif loop.index % 4 == 3 %}#10B981{% else %}#F59E0B{% endif %};">
+                            {% if txn.type == 'income' %}
+                                <i class="fa-solid fa-arrow-down-left"></i>
+                            {% elif 'food' in (txn.remarks or '')|lower or 'noodles' in (txn.remarks or '')|lower or 'coffee' in (txn.remarks or '')|lower %}
+                                <i class="fa-solid fa-mug-hot"></i>
+                            {% elif 'uber' in (txn.remarks or '')|lower or 'transport' in (txn.remarks or '')|lower %}
+                                <i class="fa-solid fa-car"></i>
+                            {% elif txn.category and txn.category.icon %}
+                                <i class="{% if txn.category.icon.startswith('fa-') %}{{ txn.category.icon }}{% else %}fa-solid fa-{{ txn.category.icon }}{% endif %}"></i>
+                            {% else %}
+                                <i class="fa-solid fa-bag-shopping"></i>
+                            {% endif %}
+                        </div>
+
+                        <!-- Center Info -->
+                        <div class="min-w-0">
+                            <p class="text-sm font-bold text-slate-900 truncate">
+                                {{ txn.remarks or (txn.category.name if txn.category else "Transaction") }}
+                            </p>
+                            <p class="text-xs text-slate-400 font-medium truncate mt-0.5">
+                                {{ txn.category.name if txn.category else "General" }} · 
+                                {% if txn.date == current_date %}Today{% else %}{{ txn.date.strftime('%d %b') }}{% endif %}
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Right Amount -->
+                    <div class="text-right shrink-0">
+                        <span class="text-sm sm:text-base font-extrabold {% if txn.type == 'income' %}text-emerald-600{% else %}text-slate-900{% endif %}">
+                            {% if txn.type == 'expense' %}- {% else %}+ {% endif %}{{ user.currency_symbol }}{{ "{:,.0f}".format(txn.amount) }}
+                        </span>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <!-- Sample Template Items matching Image 1 when empty -->
+                <div class="fin-card p-3.5 sm:p-4 flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-3.5 min-w-0">
+                        <div class="category-squircle bg-[#F97316]">
+                            <i class="fa-solid fa-mug-hot"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <p class="text-sm font-bold text-slate-900 truncate">Noodles</p>
+                            <p class="text-xs text-slate-400 font-medium truncate mt-0.5">Food & Drinks · Today · 10:09 PM</p>
+                        </div>
+                    </div>
+                    <span class="text-sm sm:text-base font-extrabold text-slate-900">- {{ user.currency_symbol }}150</span>
+                </div>
+
+                <div class="fin-card p-3.5 sm:p-4 flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-3.5 min-w-0">
+                        <div class="category-squircle bg-[#06B6D4]">
+                            <i class="fa-solid fa-car"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <p class="text-sm font-bold text-slate-900 truncate">Uber</p>
+                            <p class="text-xs text-slate-400 font-medium truncate mt-0.5">Transport · Today · 08:43 PM</p>
+                        </div>
+                    </div>
+                    <span class="text-sm sm:text-base font-extrabold text-slate-900">- {{ user.currency_symbol }}220</span>
+                </div>
+            {% endif %}
+        </div>
     </div>
 
 </div>
-{% endblock %}
 
-{% block extra_scripts %}
+<!-- Voice Quick Log Modal -->
+<div id="voice-log-modal" class="fixed inset-0 z-50 hidden transition-opacity duration-200">
+    <div onclick="closeVoiceLogModal()" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs"></div>
+    <div class="fixed inset-0 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl border border-slate-100 z-10 space-y-4 text-center">
+            <div class="w-16 h-16 rounded-full bg-[#0F172A] text-white flex items-center justify-center text-2xl mx-auto shadow-lg shadow-slate-900/20 animate-pulse">
+                <i class="fa-solid fa-microphone"></i>
+            </div>
+            <h3 class="text-base font-bold text-slate-900">Voice Transaction Entry</h3>
+            <p id="voice-status-text" class="text-xs text-slate-500">Listening... Speak e.g., "Paid 250 for lunch" or "Spent 500 on groceries"</p>
+            <div class="pt-2 flex items-center gap-2">
+                <button type="button" onclick="closeVoiceLogModal()" class="flex-1 py-2.5 bg-slate-100 text-slate-600 rounded-xl font-semibold text-xs hover:bg-slate-200">
+                    Cancel
+                </button>
+                <button type="button" onclick="openLogModal('expense')" class="flex-1 py-2.5 bg-[#0F172A] text-white rounded-xl font-bold text-xs hover:bg-slate-800">
+                    Manual Entry
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scan Modal -->
+<div id="scan-log-modal" class="fixed inset-0 z-50 hidden transition-opacity duration-200">
+    <div onclick="closeScanModal()" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs"></div>
+    <div class="fixed inset-0 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl border border-slate-100 z-10 space-y-4 text-center">
+            <div class="w-16 h-16 rounded-full bg-slate-100 text-slate-800 flex items-center justify-center text-2xl mx-auto border border-slate-200">
+                <i class="fa-solid fa-qrcode"></i>
+            </div>
+            <h3 class="text-base font-bold text-slate-900">Scan Bill or Receipt</h3>
+            <p class="text-xs text-slate-500">Capture a photo or upload an invoice to log transactions instantly.</p>
+            <label class="block w-full py-2.5 px-4 bg-[#0F172A] text-white font-bold rounded-xl text-xs hover:bg-slate-800 cursor-pointer shadow-md shadow-slate-900/10">
+                <i class="fa-solid fa-camera mr-1.5"></i> Take Photo / Upload
+                <input type="file" accept="image/*" class="hidden" onchange="closeScanModal(); openLogModal('expense');">
+            </label>
+            <button type="button" onclick="closeScanModal()" class="w-full py-2 bg-slate-100 text-slate-600 rounded-xl font-semibold text-xs hover:bg-slate-200">
+                Cancel
+            </button>
+        </div>
+    </div>
+</div>
+
 <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        loadDashboardCharts("{{ period }}", "{{ start_date.strftime('%Y-%m-%d') }}", "{{ end_date.strftime('%Y-%m-%d') }}");
+// Balance Mask Toggle (Image 1: ₹•••••• toggle)
+function toggleBalanceMask() {
+    const masked = document.getElementById('masked-total-balance');
+    const real = document.getElementById('real-total-balance');
+    const eye = document.getElementById('balance-eye-icon');
+
+    if (masked && real) {
+        const isHidden = masked.classList.contains('hidden');
+        if (isHidden) {
+            masked.classList.remove('hidden');
+            real.classList.add('hidden');
+            if (eye) eye.className = 'fa-regular fa-eye-slash text-sm';
+            localStorage.setItem('fin_balance_hidden', 'true');
+        } else {
+            masked.classList.add('hidden');
+            real.classList.remove('hidden');
+            if (eye) eye.className = 'fa-regular fa-eye text-sm';
+            localStorage.setItem('fin_balance_hidden', 'false');
+        }
+    }
+}
+
+function toggleWalletCardBalance() {
+    const masked = document.getElementById('wallet-card-masked-amt');
+    const real = document.getElementById('wallet-card-real-amt');
+    const eye = document.getElementById('wallet-card-eye-icon');
+
+    if (masked && real) {
+        const isHidden = masked.classList.contains('hidden');
+        if (isHidden) {
+            masked.classList.remove('hidden');
+            real.classList.add('hidden');
+            if (eye) eye.className = 'fa-regular fa-eye-slash text-xs';
+        } else {
+            masked.classList.add('hidden');
+            real.classList.remove('hidden');
+            if (eye) eye.className = 'fa-regular fa-eye text-xs';
+        }
+    }
+}
+
+// Check saved mask state
+document.addEventListener('DOMContentLoaded', () => {
+    const savedHidden = localStorage.getItem('fin_balance_hidden');
+    if (savedHidden === 'false') {
+        const masked = document.getElementById('masked-total-balance');
+        const real = document.getElementById('real-total-balance');
+        const eye = document.getElementById('balance-eye-icon');
+        if (masked && real) {
+            masked.classList.add('hidden');
+            real.classList.remove('hidden');
+            if (eye) eye.className = 'fa-regular fa-eye text-sm';
+        }
+    }
+});
+
+// Card Carousel Switcher
+const cardData = [
+    {
+        title: "{{ bank_accounts[0].bank_name if bank_accounts else ('Credit Card' if credit_cards else 'Main Wallet') }}",
+        type: "{{ 'CASH ACCOUNT' if bank_accounts else 'CREDIT CARD' }}",
+        digits: "{{ bank_accounts[0].account_number_last4 if bank_accounts else (credit_cards[0].last_4_digits if credit_cards else '5274 5678') }}",
+        amt: "{{ user.currency_symbol }} {{ '%.2f'|format(bank_accounts[0].current_balance if bank_accounts else (credit_cards[0].available_limit if credit_cards else live_balance)) }}"
+    },
+    {% if bank_accounts|length > 1 %}
+    {
+        title: "{{ bank_accounts[1].bank_name }}",
+        type: "SAVINGS ACCOUNT",
+        digits: "{{ bank_accounts[1].account_number_last4 }}",
+        amt: "{{ user.currency_symbol }} {{ '%.2f'|format(bank_accounts[1].current_balance) }}"
+    },
+    {% endif %}
+    {% if credit_cards %}
+    {
+        title: "{{ credit_cards[0].card_name }}",
+        type: "CREDIT CARD",
+        digits: "{{ credit_cards[0].last_4_digits }}",
+        amt: "{{ user.currency_symbol }} {{ '%.2f'|format(credit_cards[0].available_limit) }}"
+    }
+    {% endif %}
+];
+
+function switchCardSlide(idx) {
+    if (idx >= cardData.length) return;
+    const item = cardData[idx];
+    document.getElementById('active-card-title').textContent = item.title;
+    document.getElementById('active-card-type').textContent = item.type;
+    document.getElementById('active-card-digits').textContent = item.digits;
+    document.getElementById('wallet-card-real-amt').textContent = item.amt;
+
+    const dots = document.querySelectorAll('.card-dot');
+    dots.forEach((dot, dIdx) => {
+        if (dIdx === idx) {
+            dot.className = 'card-dot w-2 h-2 rounded-full bg-[#0F172A] transition-all';
+        } else {
+            dot.className = 'card-dot w-1.5 h-1.5 rounded-full bg-slate-300 transition-all';
+        }
     });
+}
+
+// Voice Modal
+function openVoiceLogModal() {
+    const modal = document.getElementById('voice-log-modal');
+    if (modal) modal.classList.remove('hidden');
+
+    // Web Speech Recognition if available
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+        const recognition = new SpeechRecognition();
+        recognition.lang = 'en-IN';
+        recognition.onresult = (event) => {
+            const transcript = event.results[0][0].transcript;
+            document.getElementById('voice-status-text').textContent = 'Captured: "' + transcript + '"';
+            setTimeout(() => {
+                closeVoiceLogModal();
+                openLogModal('expense');
+                const remarksInput = document.getElementById('log-remarks');
+                if (remarksInput) remarksInput.value = transcript;
+            }, 1200);
+        };
+        recognition.start();
+    }
+}
+
+function closeVoiceLogModal() {
+    const modal = document.getElementById('voice-log-modal');
+    if (modal) modal.classList.add('hidden');
+}
+
+// Scan Modal
+function openScanModal() {
+    const modal = document.getElementById('scan-log-modal');
+    if (modal) modal.classList.remove('hidden');
+}
+
+function closeScanModal() {
+    const modal = document.getElementById('scan-log-modal');
+    if (modal) modal.classList.add('hidden');
+}
 </script>
 {% endblock %}
