@@ -25,11 +25,15 @@ def init_db():
     # Safe column migration for monthly_budget if missing
     try:
         from sqlalchemy import text
-        with engine.connect() as conn:
-            conn.execute(text("ALTER TABLE users ADD COLUMN monthly_budget FLOAT DEFAULT 25000.0"))
-            conn.commit()
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS monthly_budget FLOAT DEFAULT 25000.0"))
     except Exception:
-        pass
+        try:
+            from sqlalchemy import text
+            with engine.begin() as conn:
+                conn.execute(text("ALTER TABLE users ADD COLUMN monthly_budget FLOAT DEFAULT 25000.0"))
+        except Exception:
+            pass
 
     db: Session = SessionLocal()
     try:

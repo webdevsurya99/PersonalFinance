@@ -74,11 +74,20 @@ class Settings(BaseSettings):
         - If PostgreSQL (e.g. Railway postgres:// or postgresql://), fixes dialect prefix.
         - If not specified, checks if a persistent volume directory exists.
         """
-        db_url = self.DATABASE_URL or os.getenv("DATABASE_URL", "")
+        db_url = (self.DATABASE_URL or os.getenv("DATABASE_URL") or "").strip()
         if db_url:
-            # Fix Railway postgres:// -> postgresql:// for SQLAlchemy 2.0
+            # Fix Railway legacy postgres:// -> postgresql:// for SQLAlchemy 2.0
             if db_url.startswith("postgres://"):
-                return db_url.replace("postgres://", "postgresql://", 1)
+                db_url = "postgresql://" + db_url[len("postgres://"):]
+            
+            # If postgresql:// is provided without explicit driver,
+            # use psycopg (v3) if available for seamless Python 3.13 support
+            if db_url.startswith("postgresql://"):
+                try:
+                    import psycopg  # noqa: F401
+                    db_url = "postgresql+psycopg://" + db_url[len("postgresql://"):]
+                except ImportError:
+                    pass
             return db_url
         
         # If no DATABASE_URL set, check if persistent /data or /app/data volume exists
