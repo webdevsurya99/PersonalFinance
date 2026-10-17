@@ -14,8 +14,8 @@
         
         <!-- Header Actions: Filter & Edit -->
         <div class="flex items-center gap-2">
-            <button type="button" onclick="document.getElementById('category-breakdown-list').scrollIntoView({behavior: 'smooth'})" title="Filter / Details" class="w-10 h-10 rounded-full bg-white border border-slate-200/90 text-slate-700 hover:text-slate-900 hover:bg-slate-50 flex items-center justify-center shadow-2xs transition-colors cursor-pointer">
-                <i class="fa-solid fa-sliders text-sm"></i>
+            <button type="button" onclick="document.getElementById('budget-comparison-section').scrollIntoView({behavior: 'smooth'})" title="Jump to Comparison Table" class="w-10 h-10 rounded-full bg-white border border-slate-200/90 text-slate-700 hover:text-slate-900 hover:bg-slate-50 flex items-center justify-center shadow-2xs transition-colors cursor-pointer">
+                <i class="fa-solid fa-table-list text-sm"></i>
             </button>
             <button type="button" onclick="openEditBudgetModal()" title="Edit Monthly Budget" class="w-10 h-10 rounded-full bg-white border border-slate-200/90 text-slate-700 hover:text-slate-900 hover:bg-slate-50 flex items-center justify-center shadow-2xs transition-colors cursor-pointer">
                 <i class="fa-solid fa-pencil text-sm"></i>
@@ -148,114 +148,118 @@
         </div>
     </div>
 
-    <!-- Category Breakdown Table / List -->
-    <div id="category-breakdown-list" class="fin-card p-5 space-y-4">
-        <div class="flex items-center justify-between pb-2 border-b border-slate-100">
-            <h3 class="text-sm font-bold text-slate-900">Category Breakdown</h3>
-            <span class="text-xs text-slate-400 font-medium">{{ category_list|length }} Categories</span>
-        </div>
-
-        <div class="divide-y divide-slate-100">
-            {% for cat in category_list %}
-            <div class="py-3 flex items-center justify-between gap-3 hover:bg-slate-50/60 rounded-xl px-2 transition-colors">
-                <div class="flex items-center gap-3 min-w-0">
-                    <div class="w-10 h-10 rounded-xl flex items-center justify-center text-white text-sm shrink-0 shadow-2xs" style="background-color: {{ cat.color }};">
-                        {% if cat.icon and cat.icon.startswith('fa-') %}
-                        <i class="{{ cat.icon }}"></i>
-                        {% else %}
-                        <span class="text-base select-none">{{ cat.icon }}</span>
-                        {% endif %}
-                    </div>
-                    <div class="min-w-0">
-                        <p class="text-xs sm:text-sm font-bold text-slate-900 truncate">{{ cat.name }}</p>
-                        <div class="w-32 sm:w-44 bg-slate-100 h-1.5 rounded-full overflow-hidden mt-1">
-                            <div class="h-full rounded-full" style="width: {{ cat.percentage }}%; background-color: {{ cat.color }};"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="text-right shrink-0">
-                    <p class="text-xs sm:text-sm font-bold text-slate-900">
-                        {{ user.currency_symbol }}{{ "%.2f"|format(cat.amount) }}
-                    </p>
-                    <p class="text-[10px] text-slate-400 font-medium">{{ cat.percentage }}% of spent</p>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-
-    <!-- Budget vs Actual Comparison Section -->
-    <div class="fin-card p-5 sm:p-6 space-y-4">
+    <!-- Budget vs. Actual Comparison Section (Clean Tabular Layout with Big Numbers) -->
+    <div id="budget-comparison-section" class="fin-card p-4 sm:p-6 space-y-4 overflow-hidden">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
             <div>
-                <h3 class="text-base font-extrabold text-slate-900 tracking-tight">Budget vs. Actual Comparison</h3>
-                <p class="text-xs text-slate-400 mt-0.5">Compare category monthly budget allocations against actual spending</p>
+                <h3 class="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight">Budget vs. Actual Comparison</h3>
+                <p class="text-xs text-slate-400 mt-0.5">Track category monthly budget allocations against actual spending</p>
             </div>
-            <button type="button" onclick="openBulkAllocateModal()" class="py-2 px-3.5 bg-[#0F172A] hover:bg-slate-800 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer self-start sm:self-auto">
+            <button type="button" onclick="openBulkAllocateModal()" class="py-2 px-3.5 bg-[#0F172A] hover:bg-slate-800 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer self-start sm:self-auto active:scale-95">
                 <i class="fa-solid fa-layer-group text-xs"></i>
                 <span>Allocate Budgets</span>
             </button>
         </div>
 
         {% if budget_comparisons %}
-        <div class="space-y-3">
-            {% for item in budget_comparisons %}
-            <div class="p-3.5 bg-slate-50/80 rounded-2xl border border-slate-200/60 hover:border-slate-300 transition-all space-y-2">
-                <div class="flex items-center justify-between gap-3">
-                    <div class="flex items-center gap-2.5 min-w-0">
-                        <div class="w-8 h-8 rounded-xl flex items-center justify-center text-white text-xs shrink-0 shadow-2xs" style="background-color: {{ item.color or '#6366F1' }};">
-                            {% if item.icon and item.icon.startswith('fa-') %}
-                            <i class="{{ item.icon }}"></i>
-                            {% else %}
-                            <span class="text-sm select-none">{{ item.icon or '🏷️' }}</span>
-                            {% endif %}
-                        </div>
-                        <div class="min-w-0">
-                            <span class="text-xs sm:text-sm font-bold text-slate-900 truncate block">{{ item.name }}</span>
-                            <div class="flex items-center gap-2 text-[11px] text-slate-500 font-medium">
-                                <span>Budget: <b>{{ user.currency_symbol }} {{ "{:,.0f}".format(item.allocated) }}</b></span>
-                                <span>&bull;</span>
-                                <span>Spent: <b class="{% if item.status == 'danger' %}text-rose-600{% else %}text-slate-900{% endif %}">{{ user.currency_symbol }} {{ "{:,.2f}".format(item.spent) }}</b></span>
+        <!-- Responsive High-Contrast Table -->
+        <div class="overflow-x-auto -mx-4 sm:mx-0 px-2 sm:px-0">
+            <table class="w-full text-left border-collapse min-w-[520px]">
+                <thead>
+                    <tr class="border-b border-slate-200/80 text-[11px] font-extrabold uppercase tracking-wider text-slate-400 bg-slate-50/70">
+                        <th class="py-3 px-3 sm:px-4 rounded-l-xl">Category</th>
+                        <th class="py-3 px-3 sm:px-4 text-right">Budget</th>
+                        <th class="py-3 px-3 sm:px-4 text-right">Actual</th>
+                        <th class="py-3 px-3 sm:px-4 text-right">Variance</th>
+                        <th class="py-3 px-2 sm:px-3 text-center rounded-r-xl w-12">Edit</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 text-xs">
+                    {% for item in budget_comparisons %}
+                    <tr class="hover:bg-slate-50/80 transition-colors group">
+                        <!-- 1. Category Column -->
+                        <td class="py-3.5 px-3 sm:px-4 font-bold text-slate-900">
+                            <div class="flex items-center gap-2.5 sm:gap-3">
+                                <div class="w-9 h-9 rounded-xl flex items-center justify-center text-white text-sm shrink-0 shadow-2xs" style="background-color: {{ item.color or '#6366F1' }};">
+                                    {% if item.icon and item.icon.startswith('fa-') %}
+                                    <i class="{{ item.icon }}"></i>
+                                    {% else %}
+                                    <span class="text-base select-none">{{ item.icon or '🏷️' }}</span>
+                                    {% endif %}
+                                </div>
+                                <div class="min-w-0">
+                                    <span class="text-xs sm:text-sm font-bold text-slate-900 block truncate">{{ item.name }}</span>
+                                    {% if item.allocated > 0 %}
+                                    <div class="w-20 sm:w-28 bg-slate-100 h-1.5 rounded-full overflow-hidden mt-1">
+                                        <div class="h-full rounded-full transition-all {% if item.status == 'danger' %}bg-rose-500{% elif item.status == 'warning' %}bg-amber-500{% else %}bg-emerald-500{% endif %}" style="width: {{ [item.percentage, 100]|min }}%"></div>
+                                    </div>
+                                    {% else %}
+                                    <span class="text-[10px] text-slate-400 font-medium">Unbudgeted</span>
+                                    {% endif %}
+                                </div>
                             </div>
-                        </div>
-                    </div>
+                        </td>
 
-                    <div class="flex items-center gap-2 shrink-0">
-                        <div class="text-right">
+                        <!-- 2. Budget Column (Big Numbers) -->
+                        <td class="py-3.5 px-3 sm:px-4 text-right">
+                            {% if item.allocated > 0 %}
+                            <span class="text-sm sm:text-base font-extrabold text-slate-800 block">
+                                {{ user.currency_symbol }} {{ "{:,.0f}".format(item.allocated) }}
+                            </span>
+                            <span class="text-[10px] text-slate-400 font-medium">Target</span>
+                            {% else %}
+                            <span class="text-[11px] font-semibold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full inline-block">
+                                No Limit
+                            </span>
+                            {% endif %}
+                        </td>
+
+                        <!-- 3. Actual Spent Column (Big Numbers) -->
+                        <td class="py-3.5 px-3 sm:px-4 text-right">
+                            <span class="text-sm sm:text-base font-black {% if item.status == 'danger' %}text-rose-600{% else %}text-slate-900{% endif %} block">
+                                {{ user.currency_symbol }} {{ "{:,.2f}".format(item.spent) }}
+                            </span>
+                            <span class="text-[10px] text-slate-400 font-medium">
+                                {% if item.allocated > 0 %}{{ item.percentage }}% used{% else %}Spent{% endif %}
+                            </span>
+                        </td>
+
+                        <!-- 4. Variance Column (Big Numbers with Status Pill) -->
+                        <td class="py-3.5 px-3 sm:px-4 text-right">
                             {% if item.allocated > 0 %}
                                 {% if item.variance >= 0 %}
-                                <span class="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/60 block">
-                                    +{{ user.currency_symbol }}{{ "{:,.0f}".format(item.variance) }} left
+                                <span class="text-sm sm:text-base font-black text-emerald-600 block">
+                                    +{{ user.currency_symbol }} {{ "{:,.0f}".format(item.variance) }}
+                                </span>
+                                <span class="inline-flex items-center text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/60 mt-0.5">
+                                    Remaining
                                 </span>
                                 {% else %}
-                                <span class="text-[11px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200/60 block">
-                                    -{{ user.currency_symbol }}{{ "{:,.0f}".format(item.variance|abs) }} over
+                                <span class="text-sm sm:text-base font-black text-rose-600 block">
+                                    -{{ user.currency_symbol }} {{ "{:,.0f}".format(item.variance|abs) }}
+                                </span>
+                                <span class="inline-flex items-center text-[10px] font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200/60 mt-0.5">
+                                    Over
                                 </span>
                                 {% endif %}
-                                <span class="text-[10px] text-slate-400 font-semibold mt-0.5 block">{{ item.percentage }}% used</span>
                             {% else %}
-                                <span class="text-[11px] font-medium text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full block">No Limit</span>
+                            <span class="text-slate-400 font-medium text-xs">—</span>
                             {% endif %}
-                        </div>
+                        </td>
 
-                        <button type="button" onclick="openSingleCategoryModal({{ item.id }}, '{{ item.name }}', {{ item.allocated }})" class="w-7 h-7 rounded-lg bg-white hover:bg-slate-200/80 text-slate-500 border border-slate-200 flex items-center justify-center text-xs shadow-2xs transition-colors cursor-pointer" title="Edit Budget for {{ item.name }}">
-                            <i class="fa-solid fa-pencil text-[10px]"></i>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Progress Bar -->
-                {% if item.allocated > 0 %}
-                <div class="w-full bg-slate-200/70 h-2 rounded-full overflow-hidden">
-                    <div class="h-full rounded-full transition-all duration-300 {% if item.status == 'danger' %}bg-rose-500{% elif item.status == 'warning' %}bg-amber-500{% else %}bg-emerald-500{% endif %}" style="width: {{ [item.percentage, 100]|min }}%"></div>
-                </div>
-                {% endif %}
-            </div>
-            {% endfor %}
+                        <!-- 5. Edit Action -->
+                        <td class="py-3.5 px-2 sm:px-3 text-center">
+                            <button type="button" onclick="openSingleCategoryModal({{ item.id }}, '{{ item.name }}', {{ item.allocated }})" class="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200 flex items-center justify-center text-xs transition-colors cursor-pointer active:scale-95 mx-auto" title="Edit Budget for {{ item.name }}">
+                                <i class="fa-solid fa-pencil text-[10px]"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
         {% else %}
-        <div class="text-center py-6 text-slate-400">
+        <div class="text-center py-8 text-slate-400">
             <p class="text-xs">No expense categories available to compare.</p>
         </div>
         {% endif %}

@@ -5,8 +5,8 @@
 {% block content %}
 <div class="space-y-6 max-w-4xl mx-auto">
 
-    <!-- Mobile / Top Greeting -->
-    <div class="flex items-center justify-between">
+    <!-- Mobile / Top Greeting & Master Period Filter (Single Definitive Source) -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
             <p class="text-xs sm:text-sm font-medium text-slate-500">
                 {{ greeting }}
@@ -23,8 +23,8 @@
             </h1>
         </div>
 
-        <!-- Desktop Period Filter Pills -->
-        <div class="hidden lg:flex items-center gap-1 bg-white border border-slate-200/90 rounded-2xl p-1 shadow-2xs">
+        <!-- Master Period Filter Pills (Shown ONLY ONCE on all screen sizes) -->
+        <div class="flex items-center gap-1 bg-white border border-slate-200/90 rounded-2xl p-1 shadow-2xs overflow-x-auto scrollbar-none self-start sm:self-auto max-w-full">
             <a href="/dashboard?period=this_month" class="px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all {% if period == 'this_month' %}bg-[#0F172A] text-white shadow-xs{% else %}text-slate-500 hover:text-slate-900 hover:bg-slate-50{% endif %}">
                 This Month
             </a>
@@ -37,7 +37,28 @@
             <a href="/dashboard?period=this_year" class="px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all {% if period == 'this_year' %}bg-[#0F172A] text-white shadow-xs{% else %}text-slate-500 hover:text-slate-900 hover:bg-slate-50{% endif %}">
                 This Year
             </a>
+            <button type="button" onclick="toggleCustomRangePanel()" class="px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer {% if period == 'custom' %}bg-[#0F172A] text-white shadow-xs{% else %}text-slate-500 hover:text-slate-900 hover:bg-slate-50{% endif %}">
+                <i class="fa-solid fa-sliders text-[10px] mr-1"></i>Custom Range
+            </button>
         </div>
+    </div>
+
+    <!-- Custom Date Range Expander (if user clicks Custom) -->
+    <div id="custom-range-panel" class="{% if period != 'custom' %}hidden{% endif %} p-4 rounded-2xl bg-white border border-slate-200/90 shadow-2xs">
+        <form action="/dashboard" method="GET" class="flex flex-wrap items-center gap-3">
+            <input type="hidden" name="period" value="custom">
+            <div class="flex items-center gap-2">
+                <label class="text-xs font-bold text-slate-500">From:</label>
+                <input type="date" name="start_date" id="custom-start-input" value="{{ custom_start_str }}" class="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900">
+            </div>
+            <div class="flex items-center gap-2">
+                <label class="text-xs font-bold text-slate-500">To:</label>
+                <input type="date" name="end_date" id="custom-end-input" value="{{ custom_end_str }}" class="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900">
+            </div>
+            <button type="submit" class="py-1.5 px-4 bg-[#0F172A] text-white font-bold rounded-xl text-xs hover:bg-slate-800 transition-colors shadow-2xs cursor-pointer">
+                Apply Date Range
+            </button>
+        </form>
     </div>
 
     <!-- Total Balance Section with Eye Toggle -->
@@ -202,56 +223,42 @@
     </div>
     {% endif %}
 
-    <!-- Expense Breakdown Pie Chart Section (Added Above Wallet Section) -->
+    <!-- Expense Breakdown Section (Interactive Visual Donut & Distribution) -->
     <div class="fin-card p-5 sm:p-6 space-y-4">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-100">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
             <div>
                 <h2 class="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight">Expense Breakdown</h2>
-                <p id="chart-period-subtitle" class="text-xs text-slate-400 font-medium">Categorized spending overview</p>
+                <p id="chart-period-subtitle" class="text-xs text-slate-400 font-medium mt-0.5">
+                    {{ start_date.strftime('%d %b') }} – {{ end_date.strftime('%d %b %Y') }} &bull; Spent: {{ user.currency_symbol }} {{ total_expense_formatted }}
+                </p>
             </div>
 
-            <!-- Filter Pills Row -->
-            <div class="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
-                <button type="button" onclick="loadPieChartPeriod('this_month', this)" class="pie-period-btn px-2.5 py-1 rounded-xl text-xs font-semibold whitespace-nowrap transition-all {% if period == 'this_month' %}bg-[#0F172A] text-white shadow-xs{% else %}text-slate-500 hover:text-slate-900 hover:bg-slate-100{% endif %}">
-                    This Month
+            <!-- Visualization Switcher (Donut vs Bars) -->
+            <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200/60 self-start sm:self-auto">
+                <button type="button" id="chart-view-donut-btn" onclick="switchChartView('donut')" class="px-3 py-1 text-xs font-bold rounded-lg bg-white text-slate-900 shadow-2xs transition-all cursor-pointer">
+                    <i class="fa-solid fa-chart-pie mr-1"></i> Donut
                 </button>
-                <button type="button" onclick="loadPieChartPeriod('last_month', this)" class="pie-period-btn px-2.5 py-1 rounded-xl text-xs font-semibold whitespace-nowrap transition-all {% if period == 'last_month' %}bg-[#0F172A] text-white shadow-xs{% else %}text-slate-500 hover:text-slate-900 hover:bg-slate-100{% endif %}">
-                    Last Month
-                </button>
-                <button type="button" onclick="loadPieChartPeriod('last_30_days', this)" class="pie-period-btn px-2.5 py-1 rounded-xl text-xs font-semibold whitespace-nowrap transition-all {% if period == 'last_30_days' %}bg-[#0F172A] text-white shadow-xs{% else %}text-slate-500 hover:text-slate-900 hover:bg-slate-100{% endif %}">
-                    30 Days
-                </button>
-                <button type="button" onclick="loadPieChartPeriod('this_year', this)" class="pie-period-btn px-2.5 py-1 rounded-xl text-xs font-semibold whitespace-nowrap transition-all {% if period == 'this_year' %}bg-[#0F172A] text-white shadow-xs{% else %}text-slate-500 hover:text-slate-900 hover:bg-slate-100{% endif %}">
-                    This Year
-                </button>
-                <button type="button" onclick="toggleCustomRangePanel()" class="pie-period-btn px-2.5 py-1 rounded-xl text-xs font-semibold whitespace-nowrap transition-all {% if period == 'custom' %}bg-[#0F172A] text-white shadow-xs{% else %}text-slate-500 hover:text-slate-900 hover:bg-slate-100{% endif %}">
-                    Custom Range
+                <button type="button" id="chart-view-bar-btn" onclick="switchChartView('bars')" class="px-3 py-1 text-xs font-bold rounded-lg text-slate-500 hover:text-slate-900 transition-all cursor-pointer">
+                    <i class="fa-solid fa-chart-column mr-1"></i> Breakdown
                 </button>
             </div>
         </div>
 
-        <!-- Custom Range Picker Drawer (Collapsed by default) -->
-        <div id="custom-range-panel" class="{% if period != 'custom' %}hidden{% endif %} p-3 rounded-2xl bg-slate-50 border border-slate-200/80">
-            <form action="/dashboard" method="GET" class="flex flex-wrap items-center gap-3">
-                <input type="hidden" name="period" value="custom">
-                <div class="flex items-center gap-2">
-                    <label class="text-xs font-bold text-slate-500">From:</label>
-                    <input type="date" name="start_date" id="custom-start-input" value="{{ custom_start_str }}" class="px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-xl font-bold text-slate-900">
+        <!-- Donut & Breakdown Grid -->
+        <div id="chart-donut-wrapper" class="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+            <!-- Left: Donut Chart with Dynamic Interactive Center Hole -->
+            <div class="relative flex items-center justify-center min-h-[250px]">
+                <canvas id="categoryPieChart" class="max-h-[240px] max-w-[240px] z-10"></canvas>
+                
+                <!-- Center Hole Interactive Dynamic Display -->
+                <div id="donut-center-info" class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center z-0 transition-all duration-150">
+                    <span id="donut-center-tag" class="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Spent</span>
+                    <span id="donut-center-amount" class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight mt-0.5">
+                        {{ user.currency_symbol }} {{ total_expense_formatted }}
+                    </span>
+                    <span id="donut-center-sub" class="text-[10px] text-slate-400 font-medium">In selected period</span>
                 </div>
-                <div class="flex items-center gap-2">
-                    <label class="text-xs font-bold text-slate-500">To:</label>
-                    <input type="date" name="end_date" id="custom-end-input" value="{{ custom_end_str }}" class="px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-xl font-bold text-slate-900">
-                </div>
-                <button type="submit" class="py-1.5 px-3.5 bg-[#0F172A] text-white font-bold rounded-xl text-xs hover:bg-slate-800 transition-colors shadow-2xs">
-                    Apply Filter
-                </button>
-            </form>
-        </div>
 
-        <!-- Chart Container & Legend -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
-            <div class="relative flex items-center justify-center min-h-[220px]">
-                <canvas id="categoryPieChart" class="max-h-[220px] max-w-[220px]"></canvas>
                 <div id="chart-empty-state" class="hidden absolute inset-0 flex flex-col items-center justify-center text-center">
                     <i class="fa-solid fa-chart-pie text-3xl text-slate-300 mb-2"></i>
                     <p class="text-xs font-bold text-slate-500">No Expenses Recorded</p>
@@ -259,8 +266,15 @@
                 </div>
             </div>
 
-            <!-- Dynamic Category Legend / Breakdown -->
-            <div id="chart-legend-list" class="space-y-2 max-h-[220px] overflow-y-auto pr-1">
+            <!-- Right: Dynamic Interactive Category Progress Cards -->
+            <div id="chart-legend-list" class="space-y-2.5 max-h-[270px] overflow-y-auto pr-1">
+                <!-- Populated dynamically via JS -->
+            </div>
+        </div>
+
+        <!-- Full-Width Horizontal Bar View (Toggled via Switcher) -->
+        <div id="chart-bars-wrapper" class="hidden space-y-3 pt-2">
+            <div id="chart-bars-list" class="space-y-3">
                 <!-- Populated dynamically via JS -->
             </div>
         </div>
@@ -734,8 +748,9 @@ document.addEventListener('DOMContentLoaded', () => {
     initCategoryPieChart();
 });
 
-// ---------------- Expense Breakdown Pie Chart ----------------
+// ---------------- Expense Breakdown Pie Chart & Visualization ----------------
 let pieChartInstance = null;
+let currentChartStats = null;
 
 function initCategoryPieChart() {
     loadPieChartData('{{ period }}', '{{ custom_start_str }}', '{{ custom_end_str }}');
@@ -746,17 +761,49 @@ function toggleCustomRangePanel() {
     if (panel) panel.classList.toggle('hidden');
 }
 
-function loadPieChartPeriod(period, btnEl) {
-    document.querySelectorAll('.pie-period-btn').forEach(btn => {
-        btn.className = 'pie-period-btn px-2.5 py-1 rounded-xl text-xs font-semibold whitespace-nowrap transition-all text-slate-500 hover:text-slate-900 hover:bg-slate-100';
-    });
-    if (btnEl) {
-        btnEl.className = 'pie-period-btn px-2.5 py-1 rounded-xl text-xs font-semibold whitespace-nowrap transition-all bg-[#0F172A] text-white shadow-xs';
-    }
-    const panel = document.getElementById('custom-range-panel');
-    if (panel && period !== 'custom') panel.classList.add('hidden');
+function switchChartView(mode) {
+    const donutWrapper = document.getElementById('chart-donut-wrapper');
+    const barsWrapper = document.getElementById('chart-bars-wrapper');
+    const donutBtn = document.getElementById('chart-view-donut-btn');
+    const barBtn = document.getElementById('chart-view-bar-btn');
 
-    loadPieChartData(period);
+    if (mode === 'donut') {
+        if (donutWrapper) donutWrapper.classList.remove('hidden');
+        if (barsWrapper) barsWrapper.classList.add('hidden');
+        if (donutBtn) {
+            donutBtn.className = 'px-3 py-1 text-xs font-bold rounded-lg bg-white text-slate-900 shadow-2xs transition-all cursor-pointer';
+        }
+        if (barBtn) {
+            barBtn.className = 'px-3 py-1 text-xs font-bold rounded-lg text-slate-500 hover:text-slate-900 transition-all cursor-pointer';
+        }
+    } else {
+        if (donutWrapper) donutWrapper.classList.add('hidden');
+        if (barsWrapper) barsWrapper.classList.remove('hidden');
+        if (barBtn) {
+            barBtn.className = 'px-3 py-1 text-xs font-bold rounded-lg bg-white text-slate-900 shadow-2xs transition-all cursor-pointer';
+        }
+        if (donutBtn) {
+            donutBtn.className = 'px-3 py-1 text-xs font-bold rounded-lg text-slate-500 hover:text-slate-900 transition-all cursor-pointer';
+        }
+    }
+}
+
+function updateDonutCenter(tag, amountFormatted, subText) {
+    const tagEl = document.getElementById('donut-center-tag');
+    const amtEl = document.getElementById('donut-center-amount');
+    const subEl = document.getElementById('donut-center-sub');
+    if (tagEl) tagEl.textContent = tag;
+    if (amtEl) amtEl.textContent = amountFormatted;
+    if (subEl) subEl.textContent = subText;
+}
+
+function resetDonutCenter() {
+    if (!currentChartStats) return;
+    updateDonutCenter(
+        'Total Spent',
+        `${currentChartStats.currency_symbol} ${Number(currentChartStats.total_expense).toLocaleString('en-IN', {minimumFractionDigits: 2})}`,
+        'In selected period'
+    );
 }
 
 async function loadPieChartData(period, start = '', end = '') {
@@ -768,6 +815,7 @@ async function loadPieChartData(period, start = '', end = '') {
         const res = await fetch(url);
         if (!res.ok) return;
         const data = await res.json();
+        currentChartStats = data;
 
         // Update Date Subtitle
         const sub = document.getElementById('chart-period-subtitle');
@@ -775,10 +823,14 @@ async function loadPieChartData(period, start = '', end = '') {
             sub.textContent = `${data.date_range_display} • Spent: ${data.currency_symbol} ${Number(data.total_expense).toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
         }
 
-        // Render Chart.js Donut
+        // Update Center Hole default
+        resetDonutCenter();
+
         const ctx = document.getElementById('categoryPieChart').getContext('2d');
         const emptyState = document.getElementById('chart-empty-state');
+        const donutCenter = document.getElementById('donut-center-info');
         const legendList = document.getElementById('chart-legend-list');
+        const barsList = document.getElementById('chart-bars-list');
 
         const labels = data.category_chart.labels || [];
         const chartData = data.category_chart.data || [];
@@ -786,7 +838,9 @@ async function loadPieChartData(period, start = '', end = '') {
 
         if (chartData.length === 0 || data.total_expense === 0) {
             if (emptyState) emptyState.classList.remove('hidden');
-            if (legendList) legendList.innerHTML = '<p class="text-xs text-slate-400 py-4 text-center">No expenses in this period.</p>';
+            if (donutCenter) donutCenter.classList.add('hidden');
+            if (legendList) legendList.innerHTML = '<div class="p-6 text-center text-slate-400 text-xs font-medium">No expenses recorded for this period.</div>';
+            if (barsList) barsList.innerHTML = '<div class="p-6 text-center text-slate-400 text-xs font-medium">No expenses recorded for this period.</div>';
             if (pieChartInstance) {
                 pieChartInstance.destroy();
                 pieChartInstance = null;
@@ -795,6 +849,7 @@ async function loadPieChartData(period, start = '', end = '') {
         }
 
         if (emptyState) emptyState.classList.add('hidden');
+        if (donutCenter) donutCenter.classList.remove('hidden');
 
         if (pieChartInstance) pieChartInstance.destroy();
 
@@ -805,18 +860,41 @@ async function loadPieChartData(period, start = '', end = '') {
                 datasets: [{
                     data: chartData,
                     backgroundColor: colors,
-                    borderWidth: 2,
+                    borderWidth: 3,
                     borderColor: '#ffffff',
-                    hoverOffset: 6
+                    hoverOffset: 8,
+                    borderRadius: 4,
+                    spacing: 2
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: true,
-                cutout: '68%',
+                cutout: '72%',
+                onHover: (event, activeElements) => {
+                    if (activeElements && activeElements.length > 0) {
+                        const idx = activeElements[0].index;
+                        const catLabel = labels[idx];
+                        const catAmt = chartData[idx];
+                        const catPct = Math.round((catAmt / data.total_expense) * 100);
+                        updateDonutCenter(
+                            catLabel,
+                            `${data.currency_symbol} ${Number(catAmt).toLocaleString('en-IN', {minimumFractionDigits: 0})}`,
+                            `${catPct}% of total spent`
+                        );
+                    } else {
+                        resetDonutCenter();
+                    }
+                },
                 plugins: {
                     legend: { display: false },
                     tooltip: {
+                        enabled: true,
+                        backgroundColor: '#0F172A',
+                        titleFont: { size: 12, weight: 'bold' },
+                        bodyFont: { size: 12 },
+                        padding: 10,
+                        cornerRadius: 12,
                         callbacks: {
                             label: function(context) {
                                 const val = context.raw || 0;
@@ -829,7 +907,7 @@ async function loadPieChartData(period, start = '', end = '') {
             }
         });
 
-        // Render Legend List
+        // Render Dynamic Interactive Category Progress Cards (Legend List)
         if (legendList) {
             legendList.innerHTML = '';
             labels.forEach((lbl, i) => {
@@ -838,18 +916,74 @@ async function loadPieChartData(period, start = '', end = '') {
                 const pct = Math.round((amt / data.total_expense) * 100);
 
                 const itemDiv = document.createElement('div');
-                itemDiv.className = 'flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-100 text-xs';
+                itemDiv.className = 'group p-2.5 rounded-2xl bg-slate-50/90 hover:bg-white border border-slate-100 hover:border-slate-300 shadow-2xs hover:shadow-xs transition-all cursor-pointer';
                 itemDiv.innerHTML = `
-                    <div class="flex items-center gap-2 truncate">
-                        <span class="w-3 h-3 rounded-full shrink-0" style="background-color: ${color}"></span>
-                        <span class="font-bold text-slate-800 truncate">${lbl}</span>
+                    <div class="flex items-center justify-between gap-2">
+                        <div class="flex items-center gap-2.5 min-w-0">
+                            <span class="w-3 h-3 rounded-full shrink-0 shadow-2xs" style="background-color: ${color}"></span>
+                            <span class="text-xs font-bold text-slate-800 truncate">${lbl}</span>
+                        </div>
+                        <div class="text-right shrink-0 flex items-baseline gap-1.5">
+                            <span class="text-xs font-extrabold text-slate-900">${data.currency_symbol} ${Number(amt).toLocaleString('en-IN', {minimumFractionDigits: 0})}</span>
+                            <span class="text-[10px] font-bold text-slate-500 bg-white group-hover:bg-slate-100 px-1.5 py-0.2 rounded-md border border-slate-200/60">${pct}%</span>
+                        </div>
                     </div>
-                    <div class="text-right shrink-0">
-                        <span class="font-bold text-slate-900">${data.currency_symbol} ${Number(amt).toLocaleString('en-IN', {minimumFractionDigits: 0})}</span>
-                        <span class="text-[10px] text-slate-400 font-semibold ml-1">(${pct}%)</span>
+                    <div class="w-full bg-slate-200/70 h-1.5 rounded-full overflow-hidden mt-2">
+                        <div class="h-full rounded-full transition-all duration-500" style="background-color: ${color}; width: ${pct}%"></div>
                     </div>
                 `;
+
+                // Interactive hover sync with Chart.js slice
+                itemDiv.addEventListener('mouseenter', () => {
+                    if (pieChartInstance) {
+                        pieChartInstance.setActiveElements([{ datasetIndex: 0, index: i }]);
+                        pieChartInstance.update();
+                    }
+                    updateDonutCenter(
+                        lbl,
+                        `${data.currency_symbol} ${Number(amt).toLocaleString('en-IN', {minimumFractionDigits: 0})}`,
+                        `${pct}% of total spent`
+                    );
+                });
+
+                itemDiv.addEventListener('mouseleave', () => {
+                    if (pieChartInstance) {
+                        pieChartInstance.setActiveElements([]);
+                        pieChartInstance.update();
+                    }
+                    resetDonutCenter();
+                });
+
                 legendList.appendChild(itemDiv);
+            });
+        }
+
+        // Render Bar Breakdown View
+        if (barsList) {
+            barsList.innerHTML = '';
+            labels.forEach((lbl, i) => {
+                const amt = chartData[i];
+                const color = colors[i];
+                const pct = Math.round((amt / data.total_expense) * 100);
+
+                const barCard = document.createElement('div');
+                barCard.className = 'fin-card p-3.5 sm:p-4 space-y-2';
+                barCard.innerHTML = `
+                    <div class="flex items-center justify-between gap-3">
+                        <div class="flex items-center gap-2.5 min-w-0">
+                            <div class="w-3.5 h-3.5 rounded-md shrink-0 shadow-2xs" style="background-color: ${color}"></div>
+                            <span class="text-sm font-bold text-slate-800 truncate">${lbl}</span>
+                        </div>
+                        <div class="text-right shrink-0 flex items-center gap-2">
+                            <span class="text-sm sm:text-base font-extrabold text-slate-900">${data.currency_symbol} ${Number(amt).toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
+                            <span class="text-xs font-bold px-2 py-0.5 rounded-full text-slate-700 bg-slate-100 border border-slate-200/80">${pct}%</span>
+                        </div>
+                    </div>
+                    <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                        <div class="h-full rounded-full transition-all duration-700 ease-out" style="background-color: ${color}; width: ${pct}%"></div>
+                    </div>
+                `;
+                barsList.appendChild(barCard);
             });
         }
 
