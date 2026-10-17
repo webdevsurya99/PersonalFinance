@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.database import get_db
-from app.models import User, Category, AuditLog, BankAccount, CreditCard, Trip
+from app.models import User, Category, AuditLog, BankAccount, CreditCard, Trip, Transaction
 from app.core.security import hash_password, verify_password, create_access_token, generate_csrf_token, sanitize_text
 from app.core.rate_limiter import limiter
 from app.core.presets import DEFAULT_CATEGORIES
@@ -75,6 +75,8 @@ def clean_and_deduplicate_user_categories(db: Session, user_id: int):
                 break
 
         for t_name, c in items:
+            if c.monthly_budget and (not primary.monthly_budget or primary.monthly_budget == 0):
+                primary.monthly_budget = c.monthly_budget
             if c.id != primary.id:
                 db.query(Transaction).filter(Transaction.category_id == c.id).update(
                     {"category_id": primary.id}, synchronize_session=False

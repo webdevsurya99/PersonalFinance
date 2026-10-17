@@ -835,6 +835,49 @@ def test_expense_breakdown_analytics_page(client):
     assert "This Month" in res_period.text
     assert "Weekly Groceries" in res_period.text or "4,500" in res_period.text
 
+def test_category_clean_and_deduplicate(client):
+    """Test category deduplication, mapping, and transaction reassignment."""
+    from app.routers.auth import clean_and_deduplicate_user_categories
+    db = TestingSessionLocal()
+    user = User(
+        email="dedup@example.com",
+        full_name="Dedup User",
+        hashed_password=hash_password("Pass123!"),
+        currency_symbol="₹"
+    )
+    db.add(user)
+    db.commit()
+
+    # Create duplicates: one old name, one standard
+    c1 = Category(user_id=user.id, name="groceries & supermarket", type="expense", icon="🛒", color="#10B981")
+    c2 = Category(user_id=user.id, name="Groceries", type="expense", icon="🛒", color="#10B981")
+    db.add_all([c1, c2])
+    db.commit()
+
+    # Attach transaction to c1
+    txn = Transaction(
+        user_id=user.id,
+        category_id=c1.id,
+        type="expense",
+        amount=1200.0,
+        date=datetime.date(2026, 10, 10),
+        remarks="Deduplication test transaction"
+    )
+    db.add(txn)
+    db.commit()
+
+    # Run deduplication
+    clean_and_deduplicate_user_categories(db, user.id)
+
+    # Verify only 1 Groceries category remains and transaction points to it
+    remaining_cats = db.query(Category).filter(Category.user_id == user.id).all()
+    assert len(remaining_cats) == 1
+    assert remaining_cats[0].name == "Groceries"
+    db.refresh(txn)
+    assert txn.category_id == remaining_cats[0].id
+    db.close()
+
+
 
 
 
