@@ -75,7 +75,11 @@
                  style="--pin-bg: {{ cat.color }}; left: {{ cat.pin_x }}%; top: {{ cat.pin_y }}%;"
                  title="{{ cat.name }}: {{ user.currency_symbol }}{{ '%.2f'|format(cat.amount) }} ({{ cat.percentage }}%)"
                  onclick="selectCategory('{{ cat.name }}', '{{ user.currency_symbol }}{{ '%.2f'|format(cat.amount) }}', '{{ cat.percentage }}%', '{{ cat.color }}')">
+                {% if cat.icon and cat.icon.startswith('fa-') %}
                 <i class="{{ cat.icon }}"></i>
+                {% else %}
+                <span class="text-xs leading-none select-none">{{ cat.icon }}</span>
+                {% endif %}
             </div>
             {% endfor %}
 
@@ -156,7 +160,11 @@
             <div class="py-3 flex items-center justify-between gap-3 hover:bg-slate-50/60 rounded-xl px-2 transition-colors">
                 <div class="flex items-center gap-3 min-w-0">
                     <div class="w-10 h-10 rounded-xl flex items-center justify-center text-white text-sm shrink-0 shadow-2xs" style="background-color: {{ cat.color }};">
+                        {% if cat.icon and cat.icon.startswith('fa-') %}
                         <i class="{{ cat.icon }}"></i>
+                        {% else %}
+                        <span class="text-base select-none">{{ cat.icon }}</span>
+                        {% endif %}
                     </div>
                     <div class="min-w-0">
                         <p class="text-xs sm:text-sm font-bold text-slate-900 truncate">{{ cat.name }}</p>
@@ -175,6 +183,82 @@
             </div>
             {% endfor %}
         </div>
+    </div>
+
+    <!-- Budget vs Actual Comparison Section -->
+    <div class="fin-card p-5 sm:p-6 space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+            <div>
+                <h3 class="text-base font-extrabold text-slate-900 tracking-tight">Budget vs. Actual Comparison</h3>
+                <p class="text-xs text-slate-400 mt-0.5">Compare category monthly budget allocations against actual spending</p>
+            </div>
+            <button type="button" onclick="openBulkAllocateModal()" class="py-2 px-3.5 bg-[#0F172A] hover:bg-slate-800 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer self-start sm:self-auto">
+                <i class="fa-solid fa-layer-group text-xs"></i>
+                <span>Allocate Budgets</span>
+            </button>
+        </div>
+
+        {% if budget_comparisons %}
+        <div class="space-y-3">
+            {% for item in budget_comparisons %}
+            <div class="p-3.5 bg-slate-50/80 rounded-2xl border border-slate-200/60 hover:border-slate-300 transition-all space-y-2">
+                <div class="flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                        <div class="w-8 h-8 rounded-xl flex items-center justify-center text-white text-xs shrink-0 shadow-2xs" style="background-color: {{ item.color or '#6366F1' }};">
+                            {% if item.icon and item.icon.startswith('fa-') %}
+                            <i class="{{ item.icon }}"></i>
+                            {% else %}
+                            <span class="text-sm select-none">{{ item.icon or '🏷️' }}</span>
+                            {% endif %}
+                        </div>
+                        <div class="min-w-0">
+                            <span class="text-xs sm:text-sm font-bold text-slate-900 truncate block">{{ item.name }}</span>
+                            <div class="flex items-center gap-2 text-[11px] text-slate-500 font-medium">
+                                <span>Budget: <b>{{ user.currency_symbol }} {{ "{:,.0f}".format(item.allocated) }}</b></span>
+                                <span>&bull;</span>
+                                <span>Spent: <b class="{% if item.status == 'danger' %}text-rose-600{% else %}text-slate-900{% endif %}">{{ user.currency_symbol }} {{ "{:,.2f}".format(item.spent) }}</b></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2 shrink-0">
+                        <div class="text-right">
+                            {% if item.allocated > 0 %}
+                                {% if item.variance >= 0 %}
+                                <span class="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/60 block">
+                                    +{{ user.currency_symbol }}{{ "{:,.0f}".format(item.variance) }} left
+                                </span>
+                                {% else %}
+                                <span class="text-[11px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200/60 block">
+                                    -{{ user.currency_symbol }}{{ "{:,.0f}".format(item.variance|abs) }} over
+                                </span>
+                                {% endif %}
+                                <span class="text-[10px] text-slate-400 font-semibold mt-0.5 block">{{ item.percentage }}% used</span>
+                            {% else %}
+                                <span class="text-[11px] font-medium text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full block">No Limit</span>
+                            {% endif %}
+                        </div>
+
+                        <button type="button" onclick="openSingleCategoryModal({{ item.id }}, '{{ item.name }}', {{ item.allocated }})" class="w-7 h-7 rounded-lg bg-white hover:bg-slate-200/80 text-slate-500 border border-slate-200 flex items-center justify-center text-xs shadow-2xs transition-colors cursor-pointer" title="Edit Budget for {{ item.name }}">
+                            <i class="fa-solid fa-pencil text-[10px]"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Progress Bar -->
+                {% if item.allocated > 0 %}
+                <div class="w-full bg-slate-200/70 h-2 rounded-full overflow-hidden">
+                    <div class="h-full rounded-full transition-all duration-300 {% if item.status == 'danger' %}bg-rose-500{% elif item.status == 'warning' %}bg-amber-500{% else %}bg-emerald-500{% endif %}" style="width: {{ [item.percentage, 100]|min }}%"></div>
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-6 text-slate-400">
+            <p class="text-xs">No expense categories available to compare.</p>
+        </div>
+        {% endif %}
     </div>
 
 </div>
@@ -251,5 +335,141 @@ function closeEditBudgetModal() {
     const modal = document.getElementById('edit-budget-modal');
     if (modal) modal.classList.add('hidden');
 }
+
+function openBulkAllocateModal() {
+    const modal = document.getElementById('bulk-allocate-modal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+}
+
+function closeBulkAllocateModal() {
+    const modal = document.getElementById('bulk-allocate-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+}
+
+function openSingleCategoryModal(id, name, budget) {
+    const modal = document.getElementById('single-cat-modal');
+    const titleEl = document.getElementById('single-cat-title');
+    const idInput = document.getElementById('single-cat-id');
+    const budgetInput = document.getElementById('single-cat-budget');
+    if (titleEl) titleEl.textContent = `Set Budget: ${name}`;
+    if (idInput) idInput.value = id;
+    if (budgetInput) budgetInput.value = Math.round(budget || 0);
+    if (modal) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+}
+
+function closeSingleCategoryModal() {
+    const modal = document.getElementById('single-cat-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+}
 </script>
+
+<!-- Bulk Allocate Category Budgets Modal -->
+<div id="bulk-allocate-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-x-hidden overflow-y-auto">
+    <div class="relative w-full max-w-md bg-white border border-slate-200/90 rounded-3xl shadow-2xl overflow-hidden my-auto flex flex-col box-border animate-in fade-in zoom-in-95 duration-150">
+        <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-white shrink-0">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-layer-group"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-sm text-slate-900">Allocate Category Budgets</h3>
+                    <p class="text-[11px] text-slate-400">Set monthly spending limits per category</p>
+                </div>
+            </div>
+            <button type="button" onclick="closeBulkAllocateModal()" class="w-7 h-7 rounded-full bg-slate-100 text-slate-400 hover:text-slate-800 flex items-center justify-center text-xs">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <form action="/budgets/category-limits/bulk" method="POST" class="p-5 space-y-4 max-h-[65vh] overflow-y-auto">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="month" value="{{ current_month_str }}">
+
+            <div class="space-y-3">
+                {% for cat in user_categories %}
+                <div class="flex items-center justify-between gap-3 p-2 rounded-xl bg-slate-50 border border-slate-200/60">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                        <div class="w-7 h-7 rounded-lg flex items-center justify-center text-white text-xs shrink-0" style="background-color: {{ cat.color or '#6366F1' }};">
+                            {% if cat.icon and cat.icon.startswith('fa-') %}
+                            <i class="{{ cat.icon }}"></i>
+                            {% else %}
+                            <span class="text-sm select-none">{{ cat.icon or '🏷️' }}</span>
+                            {% endif %}
+                        </div>
+                        <span class="text-xs font-bold text-slate-800 truncate">{{ cat.name }}</span>
+                    </div>
+                    <div class="relative w-28 shrink-0">
+                        <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">{{ user.currency_symbol }}</span>
+                        <input type="number" step="50" min="0" name="budget_cat_{{ cat.id }}" value="{{ '%.0f'|format(cat.monthly_budget or 0) }}"
+                               class="w-full bg-white border border-slate-200 rounded-lg pl-6 pr-2 py-1.5 text-xs font-bold text-slate-900 focus:outline-none focus:border-slate-900 text-right">
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="flex items-center gap-2 pt-2 border-t border-slate-100">
+                <button type="button" onclick="closeBulkAllocateModal()" class="flex-1 py-2.5 bg-slate-100 text-slate-600 rounded-xl font-semibold text-xs hover:bg-slate-200 transition-colors">
+                    Cancel
+                </button>
+                <button type="submit" class="flex-1 py-2.5 bg-[#0F172A] text-white rounded-xl font-bold text-xs hover:bg-slate-800 shadow-md shadow-slate-900/10 transition-all cursor-pointer">
+                    Save Allocations
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Single Category Budget Modal -->
+<div id="single-cat-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-x-hidden overflow-y-auto">
+    <div class="relative w-full max-w-sm bg-white border border-slate-200/90 rounded-3xl shadow-2xl overflow-hidden my-auto flex flex-col box-border animate-in fade-in zoom-in-95 duration-150">
+        <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-white shrink-0">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-pencil"></i>
+                </div>
+                <h3 class="font-bold text-sm text-slate-900" id="single-cat-title">Set Category Budget</h3>
+            </div>
+            <button type="button" onclick="closeSingleCategoryModal()" class="w-7 h-7 rounded-full bg-slate-100 text-slate-400 hover:text-slate-800 flex items-center justify-center text-xs">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <form action="/budgets/category-limit" method="POST" class="p-5 space-y-4">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="month" value="{{ current_month_str }}">
+            <input type="hidden" id="single-cat-id" name="category_id" value="">
+
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1.5">Monthly Limit for this Category ({{ user.currency_symbol }})</label>
+                <div class="relative">
+                    <span class="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-slate-400">{{ user.currency_symbol }}</span>
+                    <input type="number" step="50" min="0" id="single-cat-budget" name="monthly_budget" value="0" required
+                           class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-3 py-2.5 text-sm font-bold text-slate-900 focus:outline-none focus:border-slate-900 focus:bg-white transition-colors">
+                </div>
+                <p class="text-[11px] text-slate-400 mt-1">Set to 0 if you don't wish to place a limit on this category.</p>
+            </div>
+
+            <div class="flex items-center gap-2 pt-2">
+                <button type="button" onclick="closeSingleCategoryModal()" class="flex-1 py-2.5 bg-slate-100 text-slate-600 rounded-xl font-semibold text-xs hover:bg-slate-200 transition-colors">
+                    Cancel
+                </button>
+                <button type="submit" class="flex-1 py-2.5 bg-[#0F172A] text-white rounded-xl font-bold text-xs hover:bg-slate-800 shadow-md shadow-slate-900/10 transition-all cursor-pointer">
+                    Save
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
 {% endblock %}

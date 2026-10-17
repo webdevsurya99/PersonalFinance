@@ -25,8 +25,15 @@ async def categories_page(
     db: Session = Depends(get_db)
 ):
     categories = db.query(Category).filter(
-        (Category.user_id == current_user.id) | (Category.is_system == True)
+        Category.user_id == current_user.id
     ).order_by(Category.type.asc(), Category.name.asc()).all()
+
+    if not categories:
+        from app.routers.auth import initialize_default_categories
+        initialize_default_categories(db, current_user)
+        categories = db.query(Category).filter(
+            Category.user_id == current_user.id
+        ).order_by(Category.type.asc(), Category.name.asc()).all()
 
     cat_stats = {}
     for cat in categories:
@@ -151,6 +158,7 @@ async def delete_category(
 
     return RedirectResponse(url="/categories", status_code=status.HTTP_303_SEE_OTHER)
 
+@router.post("/categories/restore-defaults")
 @router.post("/categories/reset-defaults")
 async def reset_default_categories(
     request: Request,
@@ -172,10 +180,47 @@ async def reset_default_categories(
                 type=cat["type"],
                 icon=cat["icon"],
                 color=cat["color"],
+                monthly_budget=0.0,
                 is_system=True,
                 created_at=get_now_utc()
             )
             db.add(new_cat)
+        elif not existing.icon or existing.icon == "tag":
+            existing.icon = cat["icon"]
+            existing.color = cat["color"]
+    db.commit()
+
+    return RedirectResponse(url="/categories", status_code=status.HTTP_303_SEE_OTHER)
+
+@router.post("/categories/cleanup-duplicates")
+async def cleanup_duplicate_categories(
+    request: Request,
+    csrf_token: str = Form(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    await verify_csrf(request, current_user)
+
+    user_cats = db.query(Category).filter(Category.user_id == current_user.id).all()
+    seen = {}
+    preset_map = {c["name"].strip().lower(): c for c in DEFAULT_CATEGORIES}
+
+    for cat in user_cats:
+        key = (cat.name.strip().lower(), cat.type)
+        if key in seen:
+            primary = seen[key]
+            # Re-link transactions
+            db.query(Transaction).filter(
+                Transaction.user_id == current_user.id,
+                Transaction.category_id == cat.id
+            ).update({"category_id": primary.id}, synchronize_session=False)
+            db.delete(cat)
+        else:
+            seen[key] = cat
+            if not cat.icon or cat.icon == "tag":
+                if key[0] in preset_map:
+                    cat.icon = preset_map[key[0]]["icon"]
+                    cat.color = preset_map[key[0]]["color"]
     db.commit()
 
     return RedirectResponse(url="/categories", status_code=status.HTTP_303_SEE_OTHER)

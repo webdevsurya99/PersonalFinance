@@ -31,9 +31,9 @@ def parse_optional_int(val: Optional[Any]) -> Optional[int]:
     except (ValueError, TypeError):
         return None
 
-def apply_balance_delta(db: Session, txn_type: str, amount: float, bank_id: Optional[int], card_id: Optional[int], is_reversal: bool = False):
+def apply_balance_delta(db: Session, txn_type: str, amount: float, bank_id: Optional[int], card_id: Optional[int], is_reversal: bool = False, user_id: Optional[int] = None):
     """
-    Adjust bank account balance or credit card available limit for a transaction.
+    Adjust bank account balance, credit card available limit, or cash in hand for a transaction.
     """
     factor = -1 if is_reversal else 1
 
@@ -54,6 +54,15 @@ def apply_balance_delta(db: Session, txn_type: str, amount: float, bank_id: Opti
             elif txn_type == "income":
                 card.available_limit += (amount * factor)
             card.updated_at = get_now_utc()
+
+    elif user_id:
+        u = db.query(User).filter(User.id == user_id).first()
+        if u:
+            cur_cash = getattr(u, "cash_balance", 0.0) or 0.0
+            if txn_type == "expense":
+                u.cash_balance = cur_cash - (amount * factor)
+            elif txn_type == "income":
+                u.cash_balance = cur_cash + (amount * factor)
 
 @router.get("/transactions", response_class=HTMLResponse)
 async def list_transactions(
@@ -216,7 +225,7 @@ async def create_transaction(
     db.add(txn)
     
     # Update linked account balance
-    apply_balance_delta(db, txn.type, amount, bank_account_id, credit_card_id, is_reversal=False)
+    apply_balance_delta(db, txn.type, amount, bank_account_id, credit_card_id, is_reversal=False, user_id=current_user.id)
     db.commit()
 
     # If AJAX request, return JSON
@@ -285,7 +294,7 @@ async def update_transaction(
         raise HTTPException(status_code=404, detail="Transaction not found.")
 
     # 1. Reverse previous balance impact
-    apply_balance_delta(db, txn.type, txn.amount, txn.bank_account_id, txn.credit_card_id, is_reversal=True)
+    apply_balance_delta(db, txn.type, txn.amount, txn.bank_account_id, txn.credit_card_id, is_reversal=True, user_id=current_user.id)
 
     # 2. Parse new payment source
     bank_account_id = None
@@ -313,7 +322,7 @@ async def update_transaction(
     txn.updated_at = get_now_utc()
 
     # 4. Apply new balance impact
-    apply_balance_delta(db, txn.type, txn.amount, txn.bank_account_id, txn.credit_card_id, is_reversal=False)
+    apply_balance_delta(db, txn.type, txn.amount, txn.bank_account_id, txn.credit_card_id, is_reversal=False, user_id=current_user.id)
     db.commit()
 
     return RedirectResponse(url="/transactions", status_code=status.HTTP_303_SEE_OTHER)
@@ -333,7 +342,7 @@ async def delete_transaction(
         raise HTTPException(status_code=404, detail="Transaction not found.")
 
     # Reverse balance impact
-    apply_balance_delta(db, txn.type, txn.amount, txn.bank_account_id, txn.credit_card_id, is_reversal=True)
+    apply_balance_delta(db, txn.type, txn.amount, txn.bank_account_id, txn.credit_card_id, is_reversal=True, user_id=current_user.id)
 
     db.delete(txn)
     db.commit()

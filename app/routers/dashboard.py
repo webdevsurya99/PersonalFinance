@@ -15,8 +15,10 @@ from app.core.date_provider import DateProvider
 from app.core.security import generate_csrf_token
 from app.core.reminder_engine import sync_card_reminders
 
+from app.core.templates import templates
+from app.core.currency import format_inr
+
 router = APIRouter(tags=["Dashboard"])
-templates = Jinja2Templates(directory="app/templates")
 
 def get_date_range_for_period(
     period: str, 
@@ -124,7 +126,8 @@ async def dashboard_page(
     total_credit_limit = sum(c.total_limit for c in credit_cards)
     total_available_credit = sum(c.available_limit for c in credit_cards)
     total_credit_used = max(0.0, total_credit_limit - total_available_credit)
-    live_balance = total_bank_balance - total_credit_used
+    cash_balance = getattr(current_user, "cash_balance", 0.0) or 0.0
+    live_balance = total_bank_balance + cash_balance - total_credit_used
 
     # Categories & Trips for fast lodging modal
     categories = db.query(Category).filter(
@@ -196,11 +199,18 @@ async def dashboard_page(
             "savings_rate": savings_rate,
             "bank_accounts": bank_accounts,
             "total_bank_balance": total_bank_balance,
+            "cash_balance": cash_balance,
             "credit_cards": credit_cards,
             "total_credit_limit": total_credit_limit,
             "total_available_credit": total_available_credit,
             "total_credit_used": total_credit_used,
             "live_balance": live_balance,
+            "live_balance_formatted": format_inr(live_balance),
+            "total_bank_balance_formatted": format_inr(total_bank_balance),
+            "cash_balance_formatted": format_inr(cash_balance),
+            "total_income_formatted": format_inr(total_income),
+            "total_expense_formatted": format_inr(total_expense),
+            "net_savings_formatted": format_inr(net_savings),
             "categories": categories,
             "active_trips": active_trips,
             "recent_transactions": recent_transactions,
@@ -304,7 +314,8 @@ async def dashboard_stats_api(
     total_credit_limit = sum(c.total_limit for c in credit_cards)
     total_available_credit = sum(c.available_limit for c in credit_cards)
     total_credit_used = max(0.0, total_credit_limit - total_available_credit)
-    live_balance = total_bank_balance - total_credit_used
+    cash_balance = getattr(current_user, "cash_balance", 0.0) or 0.0
+    live_balance = total_bank_balance + cash_balance - total_credit_used
 
     return JSONResponse({
         "period": period,
@@ -316,8 +327,15 @@ async def dashboard_stats_api(
         "net_savings": net_savings,
         "savings_rate": savings_rate,
         "total_bank_balance": total_bank_balance,
+        "cash_balance": cash_balance,
         "total_credit_used": total_credit_used,
         "live_balance": live_balance,
+        "live_balance_formatted": format_inr(live_balance),
+        "total_bank_balance_formatted": format_inr(total_bank_balance),
+        "cash_balance_formatted": format_inr(cash_balance),
+        "total_income_formatted": format_inr(total_income),
+        "total_expense_formatted": format_inr(total_expense),
+        "net_savings_formatted": format_inr(net_savings),
         "currency_symbol": current_user.currency_symbol,
         "category_chart": {
             "labels": [c["label"] for c in sorted_cats],
@@ -407,7 +425,7 @@ async def budgets_page(
                 idx = len(cat_map) % len(palette)
                 chosen_color = t.category.color if t.category.color and t.category.color != "#6366F1" else palette[idx]["color"]
                 chosen_icon = t.category.icon or palette[idx]["icon"]
-                if not chosen_icon.startswith("fa-"):
+                if chosen_icon and not chosen_icon.startswith("fa-") and not any(ord(c) > 127 for c in chosen_icon):
                     chosen_icon = f"fa-solid fa-{chosen_icon}"
                 cat_map[cid] = {
                     "id": cid,
@@ -448,13 +466,51 @@ async def budgets_page(
     # If no expenses yet, provide friendly fallback preview pins
     if not category_list:
         sample_cats = [
-            {"id": 1, "name": "Food & Dining", "icon": "fa-solid fa-mug-hot", "color": "#F97316", "amount": 0.0, "percentage": 35.0, "pin_x": 88.0, "pin_y": 62.0},
-            {"id": 2, "name": "Transport", "icon": "fa-solid fa-car", "color": "#06B6D4", "amount": 0.0, "percentage": 25.0, "pin_x": 22.0, "pin_y": 78.0},
-            {"id": 3, "name": "Groceries", "icon": "fa-solid fa-basket-shopping", "color": "#10B981", "amount": 0.0, "percentage": 20.0, "pin_x": 15.0, "pin_y": 38.0},
-            {"id": 4, "name": "Shopping", "icon": "fa-solid fa-bag-shopping", "color": "#F59E0B", "amount": 0.0, "percentage": 10.0, "pin_x": 48.0, "pin_y": 10.0},
-            {"id": 5, "name": "Health", "icon": "fa-solid fa-heart-pulse", "color": "#EF4444", "amount": 0.0, "percentage": 10.0, "pin_x": 80.0, "pin_y": 25.0},
+            {"id": 1, "name": "Food & Dining", "icon": "🍔", "color": "#F97316", "amount": 0.0, "percentage": 35.0, "pin_x": 88.0, "pin_y": 62.0},
+            {"id": 2, "name": "Transport", "icon": "🚗", "color": "#06B6D4", "amount": 0.0, "percentage": 25.0, "pin_x": 22.0, "pin_y": 78.0},
+            {"id": 3, "name": "Groceries", "icon": "🛒", "color": "#10B981", "amount": 0.0, "percentage": 20.0, "pin_x": 15.0, "pin_y": 38.0},
+            {"id": 4, "name": "Shopping", "icon": "🛍️", "color": "#F59E0B", "amount": 0.0, "percentage": 10.0, "pin_x": 48.0, "pin_y": 10.0},
+            {"id": 5, "name": "Health", "icon": "💊", "color": "#EF4444", "amount": 0.0, "percentage": 10.0, "pin_x": 80.0, "pin_y": 25.0},
         ]
         category_list = sample_cats
+
+    # Category Budget vs Actual Comparison
+    user_categories = db.query(Category).filter(
+        Category.user_id == current_user.id,
+        Category.type == "expense"
+    ).order_by(Category.name.asc()).all()
+
+    budget_comparisons = []
+    total_allocated_budget = 0.0
+    for cat in user_categories:
+        allocated = getattr(cat, "monthly_budget", 0.0) or 0.0
+        spent = cat_map.get(cat.id, {}).get("amount", 0.0)
+        variance = allocated - spent
+        pct = round((spent / allocated * 100), 1) if allocated > 0 else (0.0 if spent == 0 else 100.0)
+        total_allocated_budget += allocated
+
+        status_class = "neutral"
+        if allocated > 0:
+            if spent > allocated:
+                status_class = "danger"
+            elif pct >= 80:
+                status_class = "warning"
+            else:
+                status_class = "success"
+        elif spent > 0:
+            status_class = "unbudgeted"
+
+        budget_comparisons.append({
+            "id": cat.id,
+            "name": cat.name,
+            "icon": cat.icon,
+            "color": cat.color,
+            "allocated": allocated,
+            "spent": spent,
+            "variance": variance,
+            "percentage": pct,
+            "status": status_class
+        })
 
     csrf_token = generate_csrf_token(current_user.id)
 
@@ -474,6 +530,9 @@ async def budgets_page(
             "percentage_spent": percentage_spent,
             "remaining_budget": remaining_budget,
             "category_list": category_list,
+            "user_categories": user_categories,
+            "budget_comparisons": budget_comparisons,
+            "total_allocated_budget": total_allocated_budget,
             "csrf_token": csrf_token
         }
     )
@@ -495,4 +554,49 @@ async def update_budget_limit(
 
     redirect_url = f"/budgets?month={month}" if month else "/budgets"
     return RedirectResponse(url=redirect_url, status_code=status.HTTP_303_SEE_OTHER)
+
+@router.post("/budgets/category-limit")
+async def update_single_category_budget(
+    request: Request,
+    category_id: int = Form(...),
+    monthly_budget: float = Form(...),
+    csrf_token: str = Form(...),
+    month: Optional[str] = Form(None),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    from app.dependencies import verify_csrf
+    await verify_csrf(request, current_user)
+    cat = db.query(Category).filter(Category.id == category_id, Category.user_id == current_user.id).first()
+    if cat:
+        cat.monthly_budget = max(0.0, float(monthly_budget))
+        db.commit()
+    redirect_url = f"/budgets?month={month}" if month else "/budgets"
+    return RedirectResponse(url=redirect_url, status_code=status.HTTP_303_SEE_OTHER)
+
+@router.post("/budgets/category-limits/bulk")
+async def bulk_update_category_budgets(
+    request: Request,
+    csrf_token: str = Form(...),
+    month: Optional[str] = Form(None),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    from app.dependencies import verify_csrf
+    await verify_csrf(request, current_user)
+    form_data = await request.form()
+    for key, value in form_data.items():
+        if key.startswith("budget_cat_"):
+            try:
+                cid = int(key.replace("budget_cat_", ""))
+                val = max(0.0, float(value))
+                cat = db.query(Category).filter(Category.id == cid, Category.user_id == current_user.id).first()
+                if cat:
+                    cat.monthly_budget = val
+            except (ValueError, TypeError):
+                pass
+    db.commit()
+    redirect_url = f"/budgets?month={month}" if month else "/budgets"
+    return RedirectResponse(url=redirect_url, status_code=status.HTTP_303_SEE_OTHER)
+
 

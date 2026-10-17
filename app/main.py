@@ -22,18 +22,22 @@ def init_db():
     """Create database tables and default admin if missing."""
     Base.metadata.create_all(bind=engine)
     
-    # Safe column migration for monthly_budget if missing
-    try:
-        from sqlalchemy import text
-        with engine.begin() as conn:
-            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS monthly_budget FLOAT DEFAULT 25000.0"))
-    except Exception:
+    # Safe column migrations
+    from sqlalchemy import text
+    for col_sql, fallback_sql in [
+        ("ALTER TABLE users ADD COLUMN IF NOT EXISTS monthly_budget FLOAT DEFAULT 25000.0", "ALTER TABLE users ADD COLUMN monthly_budget FLOAT DEFAULT 25000.0"),
+        ("ALTER TABLE users ADD COLUMN IF NOT EXISTS cash_balance FLOAT DEFAULT 0.0", "ALTER TABLE users ADD COLUMN cash_balance FLOAT DEFAULT 0.0"),
+        ("ALTER TABLE categories ADD COLUMN IF NOT EXISTS monthly_budget FLOAT DEFAULT 0.0", "ALTER TABLE categories ADD COLUMN monthly_budget FLOAT DEFAULT 0.0"),
+    ]:
         try:
-            from sqlalchemy import text
             with engine.begin() as conn:
-                conn.execute(text("ALTER TABLE users ADD COLUMN monthly_budget FLOAT DEFAULT 25000.0"))
+                conn.execute(text(col_sql))
         except Exception:
-            pass
+            try:
+                with engine.begin() as conn:
+                    conn.execute(text(fallback_sql))
+            except Exception:
+                pass
 
     db: Session = SessionLocal()
     try:
@@ -45,7 +49,8 @@ def init_db():
                 hashed_password=hash_password(settings.ADMIN_DEFAULT_PASSWORD),
                 is_admin=True,
                 is_active=True,
-                currency_symbol=settings.DEFAULT_CURRENCY_SYMBOL
+                currency_symbol=settings.DEFAULT_CURRENCY_SYMBOL,
+                cash_balance=0.0
             )
             db.add(admin_user)
             db.commit()
@@ -55,6 +60,33 @@ def init_db():
             auth.initialize_default_categories(db, admin_user)
             print(f"[INIT] Created default admin account: {settings.ADMIN_DEFAULT_EMAIL}")
 
+        # Automatic category repair and deduplication
+        from app.models import Category, Transaction
+        from app.core.presets import DEFAULT_CATEGORIES
+        preset_map = {c["name"].strip().lower(): c for c in DEFAULT_CATEGORIES}
+
+        users = db.query(User).all()
+        for u in users:
+            user_cats = db.query(Category).filter(Category.user_id == u.id).order_by(Category.id.asc()).all()
+            seen = {}
+            for cat in user_cats:
+                key = (cat.name.strip().lower(), cat.type)
+                if key in seen:
+                    primary = seen[key]
+                    db.query(Transaction).filter(
+                        Transaction.user_id == u.id,
+                        Transaction.category_id == cat.id
+                    ).update({"category_id": primary.id}, synchronize_session=False)
+                    db.delete(cat)
+                else:
+                    seen[key] = cat
+                    if not cat.icon or cat.icon.strip() == "" or cat.icon == "tag":
+                        if key[0] in preset_map:
+                            cat.icon = preset_map[key[0]]["icon"]
+                            if not cat.color or cat.color == "#6366F1":
+                                cat.color = preset_map[key[0]]["color"]
+        db.commit()
+
         # Check and run scheduled daily backup snapshot if needed
         snap = run_scheduled_backup_if_needed(db)
         if snap:
@@ -62,12 +94,27 @@ def init_db():
     finally:
         db.close()
 
+import asyncio
+
+async def periodic_backup_worker():
+    """Background task running every 6 hours to ensure automated backups."""
+    while True:
+        await asyncio.sleep(6 * 3600)
+        try:
+            db = SessionLocal()
+            run_scheduled_backup_if_needed(db)
+            db.close()
+        except Exception:
+            pass
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
     init_db()
+    backup_task = asyncio.create_task(periodic_backup_worker())
     yield
     # Shutdown
+    backup_task.cancel()
 
 app = FastAPI(
     title=settings.APP_NAME,

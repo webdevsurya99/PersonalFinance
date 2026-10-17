@@ -64,10 +64,10 @@
                     </div>
                 </div>
                 <div class="min-w-0">
-                    <label class="block text-[11px] font-bold text-slate-500 mb-1">Account / Card</label>
+                    <label class="block text-[11px] font-bold text-slate-500 mb-1">Account / Source</label>
                     <div class="relative flex items-center">
-                        <select name="payment_source" class="w-full h-11 px-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-xs sm:text-sm focus:outline-none focus:border-slate-900 focus:bg-white truncate box-border leading-none transition-colors">
-                            <option value="">None / Cash</option>
+                        <select name="payment_source" id="modal-payment-source" class="w-full h-11 px-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-xs sm:text-sm focus:outline-none focus:border-slate-900 focus:bg-white truncate box-border leading-none transition-colors">
+                            <option value="">💵 Cash in Hand [{{ user.currency_symbol }}{{ "%.2f"|format(user.cash_balance or 0.0) }}]</option>
                             {% if bank_accounts %}
                             <optgroup label="🏦 Bank Accounts">
                                 {% for bank in bank_accounts %}

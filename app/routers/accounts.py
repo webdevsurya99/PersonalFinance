@@ -13,8 +13,8 @@ from app.core.security import generate_csrf_token, sanitize_text
 from app.core.presets import INDIAN_BANKS, INDIAN_CREDIT_CARDS
 from app.core.reminder_engine import calculate_card_dates
 
+from app.core.templates import templates
 router = APIRouter(tags=["Accounts & Cards"])
-templates = Jinja2Templates(directory="app/templates")
 
 def get_now_utc() -> datetime.datetime:
     return datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
@@ -431,4 +431,18 @@ async def get_bank_presets_api():
 @router.get("/api/presets/cards")
 async def get_card_presets_api():
     return JSONResponse({"cards": INDIAN_CREDIT_CARDS})
+
+@router.post("/accounts/cash/update")
+async def update_cash_balance(
+    request: Request,
+    cash_balance: float = Form(...),
+    csrf_token: str = Form(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    await verify_csrf(request, current_user)
+    current_user.cash_balance = max(0.0, float(cash_balance))
+    db.commit()
+    return RedirectResponse(url="/accounts", status_code=status.HTTP_303_SEE_OTHER)
+
 

@@ -20,6 +20,7 @@ class User(Base):
     is_active = Column(Boolean, default=True, nullable=False)
     currency_symbol = Column(String(10), default="₹", nullable=False)
     monthly_budget = Column(Float, default=25000.0, nullable=True)
+    cash_balance = Column(Float, default=0.0, nullable=False)
     created_at = Column(DateTime, default=utcnow_naive, nullable=False)
     updated_at = Column(DateTime, default=utcnow_naive, onupdate=utcnow_naive, nullable=False)
 
@@ -41,6 +42,7 @@ class Category(Base):
     type = Column(String(20), nullable=False, default="expense") # 'expense' or 'income'
     icon = Column(String(50), nullable=False, default="tag") # Emoji or icon name
     color = Column(String(20), nullable=False, default="#6366F1")
+    monthly_budget = Column(Float, default=0.0, nullable=True)
     is_system = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime, default=utcnow_naive, nullable=False)
 

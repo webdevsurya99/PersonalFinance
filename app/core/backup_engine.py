@@ -53,6 +53,7 @@ def export_full_database_json(db: Session) -> Dict[str, Any]:
             "is_active": u.is_active,
             "currency_symbol": u.currency_symbol,
             "monthly_budget": getattr(u, "monthly_budget", 25000.0) or 25000.0,
+            "cash_balance": getattr(u, "cash_balance", 0.0) or 0.0,
             "created_at": u.created_at.isoformat() if u.created_at else None,
             "updated_at": u.updated_at.isoformat() if u.updated_at else None,
         })
@@ -70,6 +71,7 @@ def export_full_database_json(db: Session) -> Dict[str, Any]:
             "type": c.type,
             "icon": c.icon,
             "color": c.color,
+            "monthly_budget": getattr(c, "monthly_budget", 0.0) or 0.0,
             "is_system": c.is_system,
             "created_at": c.created_at.isoformat() if c.created_at else None,
         })

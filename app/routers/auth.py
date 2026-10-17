@@ -20,17 +20,21 @@ def get_now_utc() -> datetime.datetime:
     return datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
 
 def initialize_default_categories(db: Session, user: User):
-    """Seed initial categories for newly registered user."""
+    """Seed initial categories for newly registered user without duplicating."""
+    existing_names = {c.name.strip().lower() for c in db.query(Category).filter(Category.user_id == user.id).all()}
     for cat in DEFAULT_CATEGORIES:
-        category = Category(
-            user_id=user.id,
-            name=cat["name"],
-            type=cat["type"],
-            icon=cat["icon"],
-            color=cat["color"],
-            is_system=True
-        )
-        db.add(category)
+        if cat["name"].strip().lower() not in existing_names:
+            category = Category(
+                user_id=user.id,
+                name=cat["name"],
+                type=cat["type"],
+                icon=cat["icon"],
+                color=cat["color"],
+                monthly_budget=0.0,
+                is_system=True
+            )
+            db.add(category)
+            existing_names.add(cat["name"].strip().lower())
     db.commit()
 
 @router.get("/register", response_class=HTMLResponse)

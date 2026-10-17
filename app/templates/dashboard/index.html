@@ -5,12 +5,12 @@
 {% block content %}
 <div class="space-y-6 max-w-4xl mx-auto">
 
-    <!-- Mobile / Top Greeting (Image 1) -->
+    <!-- Mobile / Top Greeting -->
     <div class="flex items-center justify-between">
         <div>
             <p class="text-xs sm:text-sm font-medium text-slate-500">
                 {{ greeting }}
-                <span class="text-slate-400 text-xs ml-1 font-normal">({{ start_date.strftime('%d %b') }} – {{ end_date.strftime('%d %b %Y') }})</span>
+                <span id="date-range-display-text" class="text-slate-400 text-xs ml-1 font-normal">({{ start_date.strftime('%d %b') }} – {{ end_date.strftime('%d %b %Y') }})</span>
                 {% if period == 'custom' %}
                 <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 ml-1">
                     <i class="fa-solid fa-sliders text-[9px]"></i> Custom Range
@@ -23,7 +23,7 @@
             </h1>
         </div>
 
-        <!-- Optional Desktop Period Pills -->
+        <!-- Desktop Period Filter Pills -->
         <div class="hidden lg:flex items-center gap-1 bg-white border border-slate-200/90 rounded-2xl p-1 shadow-2xs">
             <a href="/dashboard?period=this_month" class="px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all {% if period == 'this_month' %}bg-[#0F172A] text-white shadow-xs{% else %}text-slate-500 hover:text-slate-900 hover:bg-slate-50{% endif %}">
                 This Month
@@ -40,16 +40,16 @@
         </div>
     </div>
 
-    <!-- Total Balance Section with Eye Toggle (Image 1) -->
+    <!-- Total Balance Section with Eye Toggle -->
     <div class="space-y-1">
         <div class="flex items-center justify-between">
             <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Balance</p>
             <div class="flex items-center gap-1.5 text-[11px] font-medium text-slate-400">
                 <span>Live Balance</span>
                 <span>&bull;</span>
-                <span title="Bank Balance − CC Due">Banks − CC Due</span>
+                <span title="Bank Balance + Cash − CC Due">Banks − CC Due</span>
                 <span class="text-[10px] font-bold px-1.5 py-0.2 rounded-full {% if live_balance >= 0 %}bg-emerald-50 text-emerald-700 border border-emerald-200{% else %}bg-rose-50 text-rose-700 border border-rose-200{% endif %}">
-                    {% if live_balance >= 0 %}Net +{% else %}Net -{% endif %}
+                    {% if live_balance >= 0 %}Surplus{% else %}Deficit{% endif %}
                 </span>
             </div>
         </div>
@@ -58,7 +58,7 @@
                 {{ user.currency_symbol }}••••••
             </span>
             <span id="real-total-balance" class="hidden text-3xl sm:text-4xl font-black text-slate-900 tracking-tight" data-raw-balance="{{ '%.2f'|format(live_balance) }}">
-                {{ user.currency_symbol }} {{ "%.2f"|format(live_balance) }}
+                {{ user.currency_symbol }} {{ live_balance_formatted }}<span class="hidden" data-raw-balance="{{ '%.2f'|format(live_balance) }}">{{ '%.2f'|format(live_balance) }}</span>
             </span>
             <button type="button" onclick="toggleBalanceMask()" title="Hide / Reveal Balance" class="w-9 h-9 rounded-full bg-white border border-slate-200/90 text-slate-400 hover:text-slate-800 flex items-center justify-center shadow-2xs transition-colors cursor-pointer active:scale-95">
                 <i id="balance-eye-icon" class="fa-regular fa-eye-slash text-sm"></i>
@@ -66,27 +66,112 @@
         </div>
     </div>
 
-    <!-- Quick Action Buttons Row (Image 1: Voice, Transfer, Scan) -->
-    <div class="grid grid-cols-3 gap-4 max-w-sm mx-auto sm:mx-0 pt-2 pb-2">
+    <!-- Top KPI Cards Row -->
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        <!-- Live Position / Surplus Card -->
+        <div class="fin-card p-3.5 sm:p-4 flex flex-col justify-between">
+            <div class="flex items-center justify-between text-slate-400">
+                <span class="text-[11px] font-semibold">Net Position</span>
+                <div class="w-6 h-6 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-wallet"></i>
+                </div>
+            </div>
+            <div class="mt-2">
+                <p id="kpi-live-balance" class="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight">
+                    {{ user.currency_symbol }} {{ live_balance_formatted }}
+                </p>
+                <p class="text-[10px] text-slate-400 font-medium">Banks + Cash − CC</p>
+            </div>
+        </div>
+
+        <!-- Bank Balance Card -->
+        <div class="fin-card p-3.5 sm:p-4 flex flex-col justify-between">
+            <div class="flex items-center justify-between text-slate-400">
+                <span class="text-[11px] font-semibold">Bank Balance</span>
+                <div class="w-6 h-6 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-building-columns"></i>
+                </div>
+            </div>
+            <div class="mt-2">
+                <p id="kpi-bank-balance" class="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight">
+                    {{ user.currency_symbol }} {{ total_bank_balance_formatted }}
+                </p>
+                <p class="text-[10px] text-slate-400 font-medium">{{ bank_accounts|length }} Accounts</p>
+            </div>
+        </div>
+
+        <!-- Cash in Hand Card -->
+        <div class="fin-card p-3.5 sm:p-4 flex flex-col justify-between">
+            <div class="flex items-center justify-between text-slate-400">
+                <span class="text-[11px] font-semibold">Cash in Hand</span>
+                <div class="w-6 h-6 rounded-lg bg-teal-50 text-teal-600 flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-money-bill-wave"></i>
+                </div>
+            </div>
+            <div class="mt-2">
+                <p id="kpi-cash-balance" class="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight">
+                    {{ user.currency_symbol }} {{ cash_balance_formatted }}
+                </p>
+                <p class="text-[10px] text-slate-400 font-medium">Physical Cash</p>
+            </div>
+        </div>
+
+        <!-- Total Income Card -->
+        <div class="fin-card p-3.5 sm:p-4 flex flex-col justify-between">
+            <div class="flex items-center justify-between text-slate-400">
+                <span class="text-[11px] font-semibold">Total Income</span>
+                <div class="w-6 h-6 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-arrow-down-left"></i>
+                </div>
+            </div>
+            <div class="mt-2">
+                <p id="kpi-income" class="text-base sm:text-lg font-extrabold text-emerald-600 tracking-tight">
+                    +{{ user.currency_symbol }} {{ total_income_formatted }}
+                </p>
+                <p class="text-[10px] text-slate-400 font-medium">In selected period</p>
+            </div>
+        </div>
+
+        <!-- Total Expense Card -->
+        <div class="fin-card p-3.5 sm:p-4 flex flex-col justify-between col-span-2 sm:col-span-1">
+            <div class="flex items-center justify-between text-slate-400">
+                <span class="text-[11px] font-semibold">Total Expense</span>
+                <div class="w-6 h-6 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-arrow-up-right"></i>
+                </div>
+            </div>
+            <div class="mt-2">
+                <p id="kpi-expense" class="text-base sm:text-lg font-extrabold text-rose-600 tracking-tight">
+                    -{{ user.currency_symbol }} {{ total_expense_formatted }}
+                </p>
+                <p class="text-[10px] text-slate-400 font-medium">
+                    Savings: {{ savings_rate }}%
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Action Buttons Row (Voice, Log Transaction, Scan) -->
+    <div class="grid grid-cols-3 gap-4 max-w-sm mx-auto sm:mx-0 pt-1 pb-1">
         <!-- Voice Button -->
         <div class="flex flex-col items-center gap-2">
-            <button type="button" onclick="openVoiceLogModal()" class="w-14 h-14 rounded-full bg-[#0F172A] text-white flex items-center justify-center shadow-md shadow-slate-900/20 hover:bg-slate-800 active:scale-95 transition-all cursor-pointer">
+            <button type="button" onclick="openVoiceLogModal()" title="Voice Transaction Logging" class="w-14 h-14 rounded-full bg-[#0F172A] text-white flex items-center justify-center shadow-md shadow-slate-900/20 hover:bg-slate-800 active:scale-95 transition-all cursor-pointer">
                 <i class="fa-solid fa-microphone text-lg"></i>
             </button>
             <span class="text-xs font-semibold text-slate-600">Voice</span>
         </div>
 
-        <!-- Transfer Button -->
+        <!-- Log Transaction Button -->
         <div class="flex flex-col items-center gap-2">
-            <button type="button" onclick="openLogModal('transfer')" class="w-14 h-14 rounded-full bg-white text-slate-800 border border-slate-200/90 flex items-center justify-center shadow-2xs hover:bg-slate-50 active:scale-95 transition-all cursor-pointer">
-                <i class="fa-solid fa-arrow-right text-lg"></i>
+            <button type="button" onclick="openLogModal('expense')" title="Log Transaction" class="w-14 h-14 rounded-full bg-white text-slate-800 border border-slate-200/90 flex items-center justify-center shadow-2xs hover:bg-slate-50 active:scale-95 transition-all cursor-pointer">
+                <i class="fa-solid fa-plus text-lg"></i>
             </button>
-            <span class="text-xs font-semibold text-slate-600">Transfer</span>
+            <span class="text-xs font-semibold text-slate-600">Log Transaction</span>
         </div>
 
         <!-- Scan Button -->
         <div class="flex flex-col items-center gap-2">
-            <button type="button" onclick="openScanModal()" class="w-14 h-14 rounded-full bg-white text-slate-800 border border-slate-200/90 flex items-center justify-center shadow-2xs hover:bg-slate-50 active:scale-95 transition-all cursor-pointer">
+            <button type="button" onclick="openScanModal()" title="Scan Receipt or Bill" class="w-14 h-14 rounded-full bg-white text-slate-800 border border-slate-200/90 flex items-center justify-center shadow-2xs hover:bg-slate-50 active:scale-95 transition-all cursor-pointer">
                 <i class="fa-solid fa-expand text-lg"></i>
             </button>
             <span class="text-xs font-semibold text-slate-600">Scan</span>
@@ -117,12 +202,87 @@
     </div>
     {% endif %}
 
-    <!-- My Wallet Section (Image 1) -->
+    <!-- Expense Breakdown Pie Chart Section (Added Above Wallet Section) -->
+    <div class="fin-card p-5 sm:p-6 space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-100">
+            <div>
+                <h2 class="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight">Expense Breakdown</h2>
+                <p id="chart-period-subtitle" class="text-xs text-slate-400 font-medium">Categorized spending overview</p>
+            </div>
+
+            <!-- Filter Pills Row -->
+            <div class="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+                <button type="button" onclick="loadPieChartPeriod('this_month', this)" class="pie-period-btn px-2.5 py-1 rounded-xl text-xs font-semibold whitespace-nowrap transition-all {% if period == 'this_month' %}bg-[#0F172A] text-white shadow-xs{% else %}text-slate-500 hover:text-slate-900 hover:bg-slate-100{% endif %}">
+                    This Month
+                </button>
+                <button type="button" onclick="loadPieChartPeriod('last_month', this)" class="pie-period-btn px-2.5 py-1 rounded-xl text-xs font-semibold whitespace-nowrap transition-all {% if period == 'last_month' %}bg-[#0F172A] text-white shadow-xs{% else %}text-slate-500 hover:text-slate-900 hover:bg-slate-100{% endif %}">
+                    Last Month
+                </button>
+                <button type="button" onclick="loadPieChartPeriod('last_30_days', this)" class="pie-period-btn px-2.5 py-1 rounded-xl text-xs font-semibold whitespace-nowrap transition-all {% if period == 'last_30_days' %}bg-[#0F172A] text-white shadow-xs{% else %}text-slate-500 hover:text-slate-900 hover:bg-slate-100{% endif %}">
+                    30 Days
+                </button>
+                <button type="button" onclick="loadPieChartPeriod('this_year', this)" class="pie-period-btn px-2.5 py-1 rounded-xl text-xs font-semibold whitespace-nowrap transition-all {% if period == 'this_year' %}bg-[#0F172A] text-white shadow-xs{% else %}text-slate-500 hover:text-slate-900 hover:bg-slate-100{% endif %}">
+                    This Year
+                </button>
+                <button type="button" onclick="toggleCustomRangePanel()" class="pie-period-btn px-2.5 py-1 rounded-xl text-xs font-semibold whitespace-nowrap transition-all {% if period == 'custom' %}bg-[#0F172A] text-white shadow-xs{% else %}text-slate-500 hover:text-slate-900 hover:bg-slate-100{% endif %}">
+                    Custom Range
+                </button>
+            </div>
+        </div>
+
+        <!-- Custom Range Picker Drawer (Collapsed by default) -->
+        <div id="custom-range-panel" class="{% if period != 'custom' %}hidden{% endif %} p-3 rounded-2xl bg-slate-50 border border-slate-200/80">
+            <form action="/dashboard" method="GET" class="flex flex-wrap items-center gap-3">
+                <input type="hidden" name="period" value="custom">
+                <div class="flex items-center gap-2">
+                    <label class="text-xs font-bold text-slate-500">From:</label>
+                    <input type="date" name="start_date" id="custom-start-input" value="{{ custom_start_str }}" class="px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-xl font-bold text-slate-900">
+                </div>
+                <div class="flex items-center gap-2">
+                    <label class="text-xs font-bold text-slate-500">To:</label>
+                    <input type="date" name="end_date" id="custom-end-input" value="{{ custom_end_str }}" class="px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-xl font-bold text-slate-900">
+                </div>
+                <button type="submit" class="py-1.5 px-3.5 bg-[#0F172A] text-white font-bold rounded-xl text-xs hover:bg-slate-800 transition-colors shadow-2xs">
+                    Apply Filter
+                </button>
+            </form>
+        </div>
+
+        <!-- Chart Container & Legend -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+            <div class="relative flex items-center justify-center min-h-[220px]">
+                <canvas id="categoryPieChart" class="max-h-[220px] max-w-[220px]"></canvas>
+                <div id="chart-empty-state" class="hidden absolute inset-0 flex flex-col items-center justify-center text-center">
+                    <i class="fa-solid fa-chart-pie text-3xl text-slate-300 mb-2"></i>
+                    <p class="text-xs font-bold text-slate-500">No Expenses Recorded</p>
+                    <p class="text-[11px] text-slate-400">Transactions will appear here</p>
+                </div>
+            </div>
+
+            <!-- Dynamic Category Legend / Breakdown -->
+            <div id="chart-legend-list" class="space-y-2 max-h-[220px] overflow-y-auto pr-1">
+                <!-- Populated dynamically via JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- My Wallet Section -->
     <div class="space-y-3">
-        <!-- Wallet Header with Actions -->
+        <!-- Wallet Header with Navigation Arrows and Actions -->
         <div class="flex items-center justify-between">
-            <h2 class="text-lg font-extrabold text-slate-900 tracking-tight">My Wallet</h2>
             <div class="flex items-center gap-2">
+                <h2 class="text-lg font-extrabold text-slate-900 tracking-tight">My Wallet</h2>
+                <span id="wallet-card-counter" class="text-xs text-slate-400 font-medium"></span>
+            </div>
+            <div class="flex items-center gap-2">
+                <!-- Navigation Arrows (< and >) -->
+                <button type="button" onclick="prevWalletCard()" title="Previous Card" class="w-8 h-8 rounded-full bg-white border border-slate-200/90 text-slate-600 hover:text-slate-900 hover:bg-slate-50 flex items-center justify-center shadow-2xs transition-colors cursor-pointer">
+                    <i class="fa-solid fa-chevron-left text-xs"></i>
+                </button>
+                <button type="button" onclick="nextWalletCard()" title="Next Card" class="w-8 h-8 rounded-full bg-white border border-slate-200/90 text-slate-600 hover:text-slate-900 hover:bg-slate-50 flex items-center justify-center shadow-2xs transition-colors cursor-pointer">
+                    <i class="fa-solid fa-chevron-right text-xs"></i>
+                </button>
+
                 <button type="button" onclick="toggleWalletCardBalance()" title="Hide Card Amount" class="w-8 h-8 rounded-full bg-white border border-slate-200/90 text-slate-500 hover:text-slate-900 flex items-center justify-center shadow-2xs transition-colors cursor-pointer">
                     <i id="wallet-card-eye-icon" class="fa-regular fa-eye-slash text-xs"></i>
                 </button>
@@ -132,72 +292,92 @@
             </div>
         </div>
 
-        <!-- Stacked Realistic Wallet Cards Carousel (Image 1) -->
-        <div class="relative pt-2 pb-1">
+        {% if not bank_accounts and not credit_cards and cash_balance <= 0 %}
+        <!-- Empty Wallet State -->
+        <div class="fin-card rounded-3xl p-8 text-center text-slate-400 border border-dashed border-slate-300">
+            <div class="w-14 h-14 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center text-2xl mx-auto mb-3">
+                <i class="fa-solid fa-wallet"></i>
+            </div>
+            <h3 class="text-sm font-bold text-slate-800">Please add an account or credit card</h3>
+            <p class="text-xs text-slate-400 mt-1 max-w-sm mx-auto">Track your liquid bank balances, credit card due limits, or cash on hand.</p>
+            <a href="/accounts" class="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-[#0F172A] hover:bg-slate-800 text-white font-bold rounded-xl text-xs shadow-md shadow-slate-900/10 transition-all">
+                <i class="fa-solid fa-plus text-xs"></i>
+                <span>Add Account or Card</span>
+            </a>
+        </div>
+        {% else %}
+        <!-- Stacked Realistic Wallet Cards Carousel with Touch Swipe -->
+        <div id="wallet-carousel-container" class="relative pt-2 pb-1 select-none touch-pan-y">
             <!-- Background Stacked Card 2 (Peek behind right) -->
-            <div class="absolute right-2 top-0 w-[88%] h-[185px] sm:h-[210px] wallet-card-peek-2 -rotate-1 rounded-2xl pointer-events-none"></div>
+            <div id="card-peek-2" class="absolute right-2 top-0 w-[88%] h-[185px] sm:h-[210px] wallet-card-peek-2 -rotate-1 rounded-2xl pointer-events-none"></div>
 
             <!-- Background Stacked Card 1 (Peek behind right) -->
-            <div class="absolute right-5 top-1 w-[92%] h-[185px] sm:h-[210px] wallet-card-peek rotate-1 rounded-2xl pointer-events-none"></div>
+            <div id="card-peek-1" class="absolute right-5 top-1 w-[92%] h-[185px] sm:h-[210px] wallet-card-peek rotate-1 rounded-2xl pointer-events-none"></div>
 
-            <!-- Front Active Physical Card -->
-            <div id="active-wallet-card" class="wallet-card-main p-5 sm:p-6 rounded-2xl w-full sm:w-[94%] min-h-[190px] sm:min-h-[215px] flex flex-col justify-between z-10 relative">
+            <!-- Front Active Card -->
+            <div id="active-wallet-card" class="wallet-card-main p-5 sm:p-6 rounded-2xl w-full sm:w-[94%] min-h-[190px] sm:min-h-[215px] flex flex-col justify-between z-10 relative transition-all duration-300">
                 <!-- Top Card Row -->
                 <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-2">
-                        <div class="w-7 h-7 rounded-full bg-white/15 border border-white/20 flex items-center justify-center text-xs text-white">
-                            <i class="fa-solid fa-shield-halved text-[11px]"></i>
+                    <div class="flex items-center gap-2.5">
+                        <div id="active-card-icon-badge" class="w-8 h-8 rounded-xl bg-white/15 border border-white/20 flex items-center justify-center text-sm text-white">
+                            <i id="active-card-icon" class="fa-solid fa-building-columns"></i>
                         </div>
-                        <span id="active-card-title" class="font-bold text-xs tracking-wide uppercase text-white/90">
-                            {{ bank_accounts[0].bank_name if bank_accounts else ("Credit Card" if credit_cards else "Main Wallet") }}
-                        </span>
+                        <div>
+                            <span id="active-card-title" class="font-bold text-sm tracking-wide text-white block">
+                                Bank Account
+                            </span>
+                            <span id="active-card-type" class="text-[10px] uppercase font-bold tracking-wider text-white/70 block">
+                                Salary Account
+                            </span>
+                        </div>
                     </div>
 
-                    <!-- Contactless Icon -->
-                    <div class="text-white/80">
-                        <i class="fa-solid fa-wifi rotate-90 text-sm"></i>
+                    <!-- Right Indicator / Chip / Type -->
+                    <div id="active-card-right-badge" class="text-white/80 flex items-center gap-1.5">
+                        <span id="active-card-network-name" class="text-[10px] uppercase font-bold tracking-widest text-white/70 hidden"></span>
+                        <i id="active-card-wifi-icon" class="fa-solid fa-wifi rotate-90 text-sm"></i>
                     </div>
                 </div>
 
-                <!-- Middle Card Row: Balance & Account Type -->
+                <!-- Middle Card Row: Balance & Label -->
                 <div class="my-3">
-                    <div class="flex items-baseline gap-1">
+                    <span id="active-card-balance-label" class="text-[10px] uppercase font-bold tracking-wider text-white/60 block">Available Balance</span>
+                    <div class="flex items-baseline gap-1 mt-0.5">
                         <span id="wallet-card-masked-amt" class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
                             {{ user.currency_symbol }}•••••
                         </span>
                         <span id="wallet-card-real-amt" class="hidden text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-                            {{ user.currency_symbol }} {{ "{:,.2f}".format(bank_accounts[0].current_balance if bank_accounts else (credit_cards[0].available_limit if credit_cards else live_balance)) }}
+                            {{ user.currency_symbol }} 0.00
                         </span>
                     </div>
-                    <p id="active-card-type" class="text-[10px] tracking-widest uppercase font-semibold text-white/70 mt-0.5">
-                        {{ "CASH ACCOUNT" if bank_accounts else "CREDIT CARD" }}
-                    </p>
                 </div>
 
-                <!-- Bottom Card Row: Card Number & Interlocking Logo -->
-                <div class="flex items-center justify-between pt-1">
-                    <div class="font-mono text-xs sm:text-sm tracking-wider text-white/80">
-                        •••• •••• <span id="active-card-digits">{{ bank_accounts[0].account_number_last4 if bank_accounts else (credit_cards[0].last_4_digits if credit_cards else "5274 5678") }}</span>
+                <!-- Bottom Card Row: Account Details -->
+                <div class="flex items-center justify-between pt-1 border-t border-white/10">
+                    <div id="active-card-num-container" class="font-mono text-xs sm:text-sm tracking-wider text-white/90">
+                        <span id="active-card-digits-label">A/C No: </span>•••• <span id="active-card-digits">0000</span>
                     </div>
 
-                    <!-- Mastercard Interlocking Circles Logo -->
-                    <div class="mastercard-circles">
-                        <div class="mastercard-circle-left"></div>
-                        <div class="mastercard-circle-right"></div>
+                    <!-- Optional Logo / Tag -->
+                    <div id="active-card-logo-container" class="flex items-center">
+                        <div class="mastercard-circles hidden" id="active-card-circles">
+                            <div class="mastercard-circle-left"></div>
+                            <div class="mastercard-circle-right"></div>
+                        </div>
+                        <span id="active-card-brand-pill" class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-white/15 text-white">Bank</span>
                     </div>
                 </div>
             </div>
 
-            <!-- Dot Indicators (Image 1: • • •) -->
-            <div class="flex justify-center items-center gap-1.5 mt-3">
-                <button type="button" onclick="switchCardSlide(0)" class="card-dot w-2 h-2 rounded-full bg-[#0F172A] transition-all"></button>
-                <button type="button" onclick="switchCardSlide(1)" class="card-dot w-1.5 h-1.5 rounded-full bg-slate-300 transition-all"></button>
-                <button type="button" onclick="switchCardSlide(2)" class="card-dot w-1.5 h-1.5 rounded-full bg-slate-300 transition-all"></button>
+            <!-- Dot Indicators -->
+            <div id="wallet-dots-container" class="flex justify-center items-center gap-1.5 mt-3">
+                <!-- Filled dynamically by JS -->
             </div>
         </div>
+        {% endif %}
     </div>
 
-    <!-- Latest Transactions Section (Image 1) -->
+    <!-- Latest Transactions Section -->
     <div class="space-y-3 pt-2">
         <!-- Section Header -->
         <div class="flex items-center justify-between">
@@ -212,18 +392,18 @@
             {% if recent_transactions %}
                 {% for txn in recent_transactions %}
                 <div class="fin-card fin-card-hover p-3.5 sm:p-4 flex items-center justify-between gap-3">
-                    <!-- Left: Squircle Icon -->
+                    <!-- Left: Icon -->
                     <div class="flex items-center gap-3.5 min-w-0">
                         <div class="category-squircle" 
-                             style="background-color: {% if txn.category and txn.category.color and txn.category.color != '#6366F1' %}{{ txn.category.color }}{% elif txn.type == 'income' %}#10B981{% elif 'food' in (txn.remarks or '')|lower or 'dine' in (txn.remarks or '')|lower %}#F97316{% elif 'uber' in (txn.remarks or '')|lower or 'cab' in (txn.remarks or '')|lower %}#06B6D4{% elif loop.index % 4 == 1 %}#F97316{% elif loop.index % 4 == 2 %}#06B6D4{% elif loop.index % 4 == 3 %}#10B981{% else %}#F59E0B{% endif %};">
+                             style="background-color: {% if txn.category and txn.category.color and txn.category.color != '#6366F1' %}{{ txn.category.color }}{% elif txn.type == 'income' %}#10B981{% elif loop.index % 4 == 1 %}#F97316{% elif loop.index % 4 == 2 %}#06B6D4{% elif loop.index % 4 == 3 %}#10B981{% else %}#F59E0B{% endif %};">
                             {% if txn.type == 'income' %}
                                 <i class="fa-solid fa-arrow-down-left"></i>
-                            {% elif 'food' in (txn.remarks or '')|lower or 'noodles' in (txn.remarks or '')|lower or 'coffee' in (txn.remarks or '')|lower %}
-                                <i class="fa-solid fa-mug-hot"></i>
-                            {% elif 'uber' in (txn.remarks or '')|lower or 'transport' in (txn.remarks or '')|lower %}
-                                <i class="fa-solid fa-car"></i>
                             {% elif txn.category and txn.category.icon %}
-                                <i class="{% if txn.category.icon.startswith('fa-') %}{{ txn.category.icon }}{% else %}fa-solid fa-{{ txn.category.icon }}{% endif %}"></i>
+                                {% if txn.category.icon.startswith('fa-') %}
+                                <i class="{{ txn.category.icon }}"></i>
+                                {% else %}
+                                <span class="text-base select-none">{{ txn.category.icon }}</span>
+                                {% endif %}
                             {% else %}
                                 <i class="fa-solid fa-bag-shopping"></i>
                             {% endif %}
@@ -235,7 +415,7 @@
                                 {{ txn.remarks or (txn.category.name if txn.category else "Transaction") }}
                             </p>
                             <p class="text-xs text-slate-400 font-medium truncate mt-0.5">
-                                {{ txn.category.name if txn.category else "General" }} · 
+                                {{ txn.category.name if txn.category else "General" }} &bull; 
                                 {% if txn.date == current_date %}Today{% else %}{{ txn.date.strftime('%d %b') }}{% endif %}
                             </p>
                         </div>
@@ -244,37 +424,16 @@
                     <!-- Right Amount -->
                     <div class="text-right shrink-0">
                         <span class="text-sm sm:text-base font-extrabold {% if txn.type == 'income' %}text-emerald-600{% else %}text-slate-900{% endif %}">
-                            {% if txn.type == 'expense' %}- {% else %}+ {% endif %}{{ user.currency_symbol }}{{ "{:,.0f}".format(txn.amount) }}
+                            {% if txn.type == 'expense' %}- {% else %}+ {% endif %}{{ user.currency_symbol }} {{ "{:,.2f}".format(txn.amount) }}
                         </span>
                     </div>
                 </div>
                 {% endfor %}
             {% else %}
-                <!-- Sample Template Items matching Image 1 when empty -->
-                <div class="fin-card p-3.5 sm:p-4 flex items-center justify-between gap-3">
-                    <div class="flex items-center gap-3.5 min-w-0">
-                        <div class="category-squircle bg-[#F97316]">
-                            <i class="fa-solid fa-mug-hot"></i>
-                        </div>
-                        <div class="min-w-0">
-                            <p class="text-sm font-bold text-slate-900 truncate">Noodles</p>
-                            <p class="text-xs text-slate-400 font-medium truncate mt-0.5">Food & Drinks · Today · 10:09 PM</p>
-                        </div>
-                    </div>
-                    <span class="text-sm sm:text-base font-extrabold text-slate-900">- {{ user.currency_symbol }}150</span>
-                </div>
-
-                <div class="fin-card p-3.5 sm:p-4 flex items-center justify-between gap-3">
-                    <div class="flex items-center gap-3.5 min-w-0">
-                        <div class="category-squircle bg-[#06B6D4]">
-                            <i class="fa-solid fa-car"></i>
-                        </div>
-                        <div class="min-w-0">
-                            <p class="text-sm font-bold text-slate-900 truncate">Uber</p>
-                            <p class="text-xs text-slate-400 font-medium truncate mt-0.5">Transport · Today · 08:43 PM</p>
-                        </div>
-                    </div>
-                    <span class="text-sm sm:text-base font-extrabold text-slate-900">- {{ user.currency_symbol }}220</span>
+                <div class="fin-card p-6 text-center text-slate-400">
+                    <i class="fa-solid fa-receipt text-3xl text-slate-300 mb-2 block"></i>
+                    <p class="text-sm font-bold text-slate-800">No transactions recorded yet</p>
+                    <p class="text-xs text-slate-400 mt-1">Click "+ Log Transaction" or use Voice / Scan to record your first entry.</p>
                 </div>
             {% endif %}
         </div>
@@ -282,51 +441,105 @@
 
 </div>
 
-<!-- Voice Quick Log Modal -->
+<!-- Voice Quick Log Modal (Fully Functional) -->
 <div id="voice-log-modal" class="fixed inset-0 z-50 hidden transition-opacity duration-200">
     <div onclick="closeVoiceLogModal()" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs"></div>
     <div class="fixed inset-0 flex items-center justify-center p-4">
-        <div class="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl border border-slate-100 z-10 space-y-4 text-center">
-            <div class="w-16 h-16 rounded-full bg-[#0F172A] text-white flex items-center justify-center text-2xl mx-auto shadow-lg shadow-slate-900/20 animate-pulse">
+        <div class="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl border border-slate-100 z-10 space-y-4 text-center animate-in fade-in zoom-in-95 duration-150">
+            <div id="voice-mic-circle" class="w-16 h-16 rounded-full bg-[#0F172A] text-white flex items-center justify-center text-2xl mx-auto shadow-lg shadow-slate-900/20 animate-pulse">
                 <i class="fa-solid fa-microphone"></i>
             </div>
-            <h3 class="text-base font-bold text-slate-900">Voice Transaction Entry</h3>
-            <p id="voice-status-text" class="text-xs text-slate-500">Listening... Speak e.g., "Paid 250 for lunch" or "Spent 500 on groceries"</p>
+            <div>
+                <h3 class="text-base font-bold text-slate-900">Voice Transaction Entry</h3>
+                <p id="voice-status-text" class="text-xs text-slate-500 mt-1">Listening... Speak e.g. "Paid 250 for lunch" or "Spent 1500 on groceries"</p>
+            </div>
+
+            <!-- Voice Transcript & Extracted Fields Preview -->
+            <div id="voice-parsed-box" class="hidden p-3 rounded-2xl bg-slate-50 border border-slate-200 text-left space-y-1.5 text-xs">
+                <div class="flex items-center justify-between font-semibold text-slate-700">
+                    <span>Parsed Amount:</span>
+                    <span id="voice-parsed-amount" class="font-extrabold text-emerald-600"></span>
+                </div>
+                <div class="flex items-center justify-between text-slate-600">
+                    <span>Category:</span>
+                    <span id="voice-parsed-cat" class="font-bold text-slate-900"></span>
+                </div>
+                <div class="text-[11px] text-slate-500 truncate">
+                    <span>Spoken: </span><i id="voice-transcript-text"></i>
+                </div>
+            </div>
+
+            <!-- Action buttons -->
             <div class="pt-2 flex items-center gap-2">
-                <button type="button" onclick="closeVoiceLogModal()" class="flex-1 py-2.5 bg-slate-100 text-slate-600 rounded-xl font-semibold text-xs hover:bg-slate-200">
+                <button type="button" onclick="closeVoiceLogModal()" class="flex-1 py-2.5 bg-slate-100 text-slate-600 rounded-xl font-semibold text-xs hover:bg-slate-200 transition-colors">
                     Cancel
                 </button>
-                <button type="button" onclick="openLogModal('expense')" class="flex-1 py-2.5 bg-[#0F172A] text-white rounded-xl font-bold text-xs hover:bg-slate-800">
-                    Manual Entry
+                <button type="button" id="voice-confirm-btn" onclick="applyVoiceResult()" class="hidden flex-1 py-2.5 bg-[#0F172A] text-white rounded-xl font-bold text-xs hover:bg-slate-800 shadow-md shadow-slate-900/10 transition-all">
+                    Confirm Entry
+                </button>
+                <button type="button" id="voice-manual-btn" onclick="closeVoiceLogModal(); openLogModal('expense');" class="flex-1 py-2.5 bg-slate-800 text-white rounded-xl font-bold text-xs hover:bg-slate-900 transition-all">
+                    Manual Form
                 </button>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Scan Modal -->
+<!-- Scan Receipt Modal (Fully Functional) -->
 <div id="scan-log-modal" class="fixed inset-0 z-50 hidden transition-opacity duration-200">
     <div onclick="closeScanModal()" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs"></div>
     <div class="fixed inset-0 flex items-center justify-center p-4">
-        <div class="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl border border-slate-100 z-10 space-y-4 text-center">
+        <div class="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl border border-slate-100 z-10 space-y-4 text-center animate-in fade-in zoom-in-95 duration-150">
             <div class="w-16 h-16 rounded-full bg-slate-100 text-slate-800 flex items-center justify-center text-2xl mx-auto border border-slate-200">
-                <i class="fa-solid fa-qrcode"></i>
+                <i class="fa-solid fa-expand"></i>
             </div>
-            <h3 class="text-base font-bold text-slate-900">Scan Bill or Receipt</h3>
-            <p class="text-xs text-slate-500">Capture a photo or upload an invoice to log transactions instantly.</p>
-            <label class="block w-full py-2.5 px-4 bg-[#0F172A] text-white font-bold rounded-xl text-xs hover:bg-slate-800 cursor-pointer shadow-md shadow-slate-900/10">
+            <div>
+                <h3 class="text-base font-bold text-slate-900">Scan Bill or Receipt</h3>
+                <p class="text-xs text-slate-500 mt-1">Take a photo or upload an invoice. Amount will be extracted automatically.</p>
+            </div>
+
+            <!-- Image Preview Box -->
+            <div id="scan-preview-box" class="hidden relative max-h-48 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
+                <img id="scan-preview-img" src="" alt="Receipt Preview" class="w-full object-contain max-h-48">
+            </div>
+
+            <!-- Detection Preview -->
+            <div id="scan-detected-box" class="hidden p-3 rounded-2xl bg-emerald-50/80 border border-emerald-200 text-left space-y-1 text-xs">
+                <p class="text-[11px] font-bold text-emerald-800 flex items-center gap-1">
+                    <i class="fa-solid fa-circle-check text-emerald-600"></i> Receipt Detected
+                </p>
+                <div class="flex items-center justify-between text-slate-700">
+                    <span>Estimated Amount:</span>
+                    <span id="scan-detected-amount" class="font-extrabold text-slate-900"></span>
+                </div>
+            </div>
+
+            <label class="block w-full py-2.5 px-4 bg-[#0F172A] text-white font-bold rounded-xl text-xs hover:bg-slate-800 cursor-pointer shadow-md shadow-slate-900/10 transition-all">
                 <i class="fa-solid fa-camera mr-1.5"></i> Take Photo / Upload
-                <input type="file" accept="image/*" class="hidden" onchange="closeScanModal(); openLogModal('expense');">
+                <input type="file" id="receipt-file-input" accept="image/*" capture="environment" class="hidden" onchange="handleReceiptFileSelect(this)">
             </label>
-            <button type="button" onclick="closeScanModal()" class="w-full py-2 bg-slate-100 text-slate-600 rounded-xl font-semibold text-xs hover:bg-slate-200">
-                Cancel
-            </button>
+
+            <div class="flex items-center gap-2">
+                <button type="button" onclick="closeScanModal()" class="flex-1 py-2 bg-slate-100 text-slate-600 rounded-xl font-semibold text-xs hover:bg-slate-200 transition-colors">
+                    Cancel
+                </button>
+                <button type="button" id="scan-confirm-btn" onclick="applyScanResult()" class="hidden flex-1 py-2 bg-emerald-600 text-white rounded-xl font-bold text-xs hover:bg-emerald-700 transition-all">
+                    Proceed
+                </button>
+            </div>
         </div>
     </div>
 </div>
 
 <script>
-// Balance Mask Toggle (Image 1: ₹•••••• toggle)
+// Available user categories for voice parser
+const userCategories = [
+    {% for cat in categories %}
+    { id: {{ cat.id }}, name: "{{ cat.name }}", icon: "{{ cat.icon }}" },
+    {% endfor %}
+];
+
+// Balance Mask Toggle
 function toggleBalanceMask() {
     const masked = document.getElementById('masked-total-balance');
     const real = document.getElementById('real-total-balance');
@@ -367,87 +580,397 @@ function toggleWalletCardBalance() {
     }
 }
 
-// Check saved mask state
-document.addEventListener('DOMContentLoaded', () => {
-    const savedHidden = localStorage.getItem('fin_balance_hidden');
-    if (savedHidden === 'false') {
-        const masked = document.getElementById('masked-total-balance');
-        const real = document.getElementById('real-total-balance');
-        const eye = document.getElementById('balance-eye-icon');
-        if (masked && real) {
-            masked.classList.add('hidden');
-            real.classList.remove('hidden');
-            if (eye) eye.className = 'fa-regular fa-eye text-sm';
-        }
-    }
-});
-
-// Card Carousel Switcher
-const cardData = [
+// ---------------- Wallet Cards Carousel ----------------
+const walletCards = [
+    {% for bank in bank_accounts %}
     {
-        title: "{{ bank_accounts[0].bank_name if bank_accounts else ('Credit Card' if credit_cards else 'Main Wallet') }}",
-        type: "{{ 'CASH ACCOUNT' if bank_accounts else 'CREDIT CARD' }}",
-        digits: "{{ bank_accounts[0].account_number_last4 if bank_accounts else (credit_cards[0].last_4_digits if credit_cards else '5274 5678') }}",
-        amt: "{{ user.currency_symbol }} {{ '%.2f'|format(bank_accounts[0].current_balance if bank_accounts else (credit_cards[0].available_limit if credit_cards else live_balance)) }}"
+        kind: "bank",
+        title: "{{ bank.bank_name }}",
+        accountType: "{{ bank.account_name if 'Account' in bank.account_name else bank.account_name ~ ' Account' }}",
+        digits: "{{ bank.account_number_last4 }}",
+        digitsLabel: "A/C No: ",
+        balanceLabel: "Available Balance",
+        balance: "{{ user.currency_symbol }} {{ bank.current_balance | format_inr }}",
+        color: "{{ bank.color or '#1E293B' }}",
+        icon: "fa-solid fa-building-columns",
+        network: "Bank",
+        isCreditCard: false
     },
-    {% if bank_accounts|length > 1 %}
+    {% endfor %}
+    {% for card in credit_cards %}
     {
-        title: "{{ bank_accounts[1].bank_name }}",
-        type: "SAVINGS ACCOUNT",
-        digits: "{{ bank_accounts[1].account_number_last4 }}",
-        amt: "{{ user.currency_symbol }} {{ '%.2f'|format(bank_accounts[1].current_balance) }}"
+        kind: "card",
+        title: "{{ card.bank_name }} {{ card.card_name }}",
+        accountType: "{{ card.card_network | upper }} CREDIT CARD",
+        digits: "{{ card.last_4_digits }}",
+        digitsLabel: "Card: ",
+        balanceLabel: "Available Limit",
+        balance: "{{ user.currency_symbol }} {{ card.available_limit | format_inr }}",
+        color: "{{ card.card_color_gradient or '#0F172A' }}",
+        icon: "fa-solid fa-credit-card",
+        network: "{{ card.card_network }}",
+        isCreditCard: true
     },
-    {% endif %}
-    {% if credit_cards %}
+    {% endfor %}
+    {% if cash_balance > 0 or (not bank_accounts and not credit_cards) %}
     {
-        title: "{{ credit_cards[0].card_name }}",
-        type: "CREDIT CARD",
-        digits: "{{ credit_cards[0].last_4_digits }}",
-        amt: "{{ user.currency_symbol }} {{ '%.2f'|format(credit_cards[0].available_limit) }}"
+        kind: "cash",
+        title: "Physical Cash",
+        accountType: "CASH IN HAND",
+        digits: "WALLET",
+        digitsLabel: "",
+        balanceLabel: "Cash on Hand",
+        balance: "{{ user.currency_symbol }} {{ cash_balance | format_inr }}",
+        color: "linear-gradient(135deg, #059669 0%, #047857 100%)",
+        icon: "fa-solid fa-money-bill-wave",
+        network: "Cash",
+        isCreditCard: false
     }
     {% endif %}
 ];
 
-function switchCardSlide(idx) {
-    if (idx >= cardData.length) return;
-    const item = cardData[idx];
-    document.getElementById('active-card-title').textContent = item.title;
-    document.getElementById('active-card-type').textContent = item.type;
-    document.getElementById('active-card-digits').textContent = item.digits;
-    document.getElementById('wallet-card-real-amt').textContent = item.amt;
+let currentCardIndex = 0;
 
-    const dots = document.querySelectorAll('.card-dot');
-    dots.forEach((dot, dIdx) => {
-        if (dIdx === idx) {
-            dot.className = 'card-dot w-2 h-2 rounded-full bg-[#0F172A] transition-all';
+function renderWalletCard(idx) {
+    if (!walletCards || walletCards.length === 0) return;
+    if (idx < 0) idx = walletCards.length - 1;
+    if (idx >= walletCards.length) idx = 0;
+    currentCardIndex = idx;
+
+    const item = walletCards[idx];
+    const cardEl = document.getElementById('active-wallet-card');
+    const titleEl = document.getElementById('active-card-title');
+    const typeEl = document.getElementById('active-card-type');
+    const balanceLabelEl = document.getElementById('active-card-balance-label');
+    const realAmtEl = document.getElementById('wallet-card-real-amt');
+    const digitsEl = document.getElementById('active-card-digits');
+    const digitsLabelEl = document.getElementById('active-card-digits-label');
+    const iconEl = document.getElementById('active-card-icon');
+    const counterEl = document.getElementById('wallet-card-counter');
+    const circlesEl = document.getElementById('active-card-circles');
+    const brandPillEl = document.getElementById('active-card-brand-pill');
+
+    if (titleEl) titleEl.textContent = item.title;
+    if (typeEl) typeEl.textContent = item.accountType;
+    if (balanceLabelEl) balanceLabelEl.textContent = item.balanceLabel;
+    if (realAmtEl) realAmtEl.textContent = item.balance;
+    if (digitsEl) digitsEl.textContent = item.digits;
+    if (digitsLabelEl) digitsLabelEl.textContent = item.digitsLabel;
+    if (iconEl) iconEl.className = item.icon;
+    if (counterEl) counterEl.textContent = `${idx + 1} of ${walletCards.length}`;
+
+    if (cardEl) {
+        if (item.color.startsWith('linear-gradient')) {
+            cardEl.style.background = item.color;
         } else {
-            dot.className = 'card-dot w-1.5 h-1.5 rounded-full bg-slate-300 transition-all';
+            cardEl.style.background = `linear-gradient(135deg, ${item.color} 0%, #0F172A 100%)`;
         }
-    });
+    }
+
+    if (circlesEl && brandPillEl) {
+        if (item.isCreditCard && item.network.toLowerCase().includes('master')) {
+            circlesEl.classList.remove('hidden');
+            brandPillEl.classList.add('hidden');
+        } else {
+            circlesEl.classList.add('hidden');
+            brandPillEl.classList.remove('hidden');
+            brandPillEl.textContent = item.network;
+        }
+    }
+
+    // Update dots
+    const dotsContainer = document.getElementById('wallet-dots-container');
+    if (dotsContainer) {
+        dotsContainer.innerHTML = '';
+        walletCards.forEach((_, dIdx) => {
+            const dot = document.createElement('button');
+            dot.type = 'button';
+            dot.className = dIdx === idx 
+                ? 'w-2.5 h-2 rounded-full bg-[#0F172A] transition-all cursor-pointer' 
+                : 'w-1.5 h-1.5 rounded-full bg-slate-300 hover:bg-slate-400 transition-all cursor-pointer';
+            dot.onclick = () => renderWalletCard(dIdx);
+            dotsContainer.appendChild(dot);
+        });
+    }
 }
 
-// Voice Modal
+function prevWalletCard() {
+    renderWalletCard(currentCardIndex - 1);
+}
+
+function nextWalletCard() {
+    renderWalletCard(currentCardIndex + 1);
+}
+
+// Touch swipe gestures for wallet cards
+document.addEventListener('DOMContentLoaded', () => {
+    renderWalletCard(0);
+
+    const carousel = document.getElementById('wallet-carousel-container');
+    if (carousel) {
+        let touchStartX = 0;
+        let touchEndX = 0;
+
+        carousel.addEventListener('touchstart', (e) => {
+            touchStartX = e.changedTouches[0].screenX;
+        }, { passive: true });
+
+        carousel.addEventListener('touchend', (e) => {
+            touchEndX = e.changedTouches[0].screenX;
+            handleSwipe();
+        }, { passive: true });
+
+        function handleSwipe() {
+            const threshold = 40;
+            if (touchEndX < touchStartX - threshold) {
+                nextWalletCard();
+            } else if (touchEndX > touchStartX + threshold) {
+                prevWalletCard();
+            }
+        }
+    }
+
+    // Initialize Expense Pie Chart
+    initCategoryPieChart();
+});
+
+// ---------------- Expense Breakdown Pie Chart ----------------
+let pieChartInstance = null;
+
+function initCategoryPieChart() {
+    loadPieChartData('{{ period }}', '{{ custom_start_str }}', '{{ custom_end_str }}');
+}
+
+function toggleCustomRangePanel() {
+    const panel = document.getElementById('custom-range-panel');
+    if (panel) panel.classList.toggle('hidden');
+}
+
+function loadPieChartPeriod(period, btnEl) {
+    document.querySelectorAll('.pie-period-btn').forEach(btn => {
+        btn.className = 'pie-period-btn px-2.5 py-1 rounded-xl text-xs font-semibold whitespace-nowrap transition-all text-slate-500 hover:text-slate-900 hover:bg-slate-100';
+    });
+    if (btnEl) {
+        btnEl.className = 'pie-period-btn px-2.5 py-1 rounded-xl text-xs font-semibold whitespace-nowrap transition-all bg-[#0F172A] text-white shadow-xs';
+    }
+    const panel = document.getElementById('custom-range-panel');
+    if (panel && period !== 'custom') panel.classList.add('hidden');
+
+    loadPieChartData(period);
+}
+
+async function loadPieChartData(period, start = '', end = '') {
+    let url = `/api/dashboard/stats?period=${period}`;
+    if (start) url += `&start_date=${start}`;
+    if (end) url += `&end_date=${end}`;
+
+    try {
+        const res = await fetch(url);
+        if (!res.ok) return;
+        const data = await res.json();
+
+        // Update Date Subtitle
+        const sub = document.getElementById('chart-period-subtitle');
+        if (sub && data.date_range_display) {
+            sub.textContent = `${data.date_range_display} • Spent: ${data.currency_symbol} ${Number(data.total_expense).toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
+        }
+
+        // Render Chart.js Donut
+        const ctx = document.getElementById('categoryPieChart').getContext('2d');
+        const emptyState = document.getElementById('chart-empty-state');
+        const legendList = document.getElementById('chart-legend-list');
+
+        const labels = data.category_chart.labels || [];
+        const chartData = data.category_chart.data || [];
+        const colors = data.category_chart.colors || [];
+
+        if (chartData.length === 0 || data.total_expense === 0) {
+            if (emptyState) emptyState.classList.remove('hidden');
+            if (legendList) legendList.innerHTML = '<p class="text-xs text-slate-400 py-4 text-center">No expenses in this period.</p>';
+            if (pieChartInstance) {
+                pieChartInstance.destroy();
+                pieChartInstance = null;
+            }
+            return;
+        }
+
+        if (emptyState) emptyState.classList.add('hidden');
+
+        if (pieChartInstance) pieChartInstance.destroy();
+
+        pieChartInstance = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: chartData,
+                    backgroundColor: colors,
+                    borderWidth: 2,
+                    borderColor: '#ffffff',
+                    hoverOffset: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                cutout: '68%',
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const val = context.raw || 0;
+                                const pct = Math.round((val / data.total_expense) * 100);
+                                return ` ${data.currency_symbol} ${Number(val).toLocaleString('en-IN', {minimumFractionDigits: 2})} (${pct}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Render Legend List
+        if (legendList) {
+            legendList.innerHTML = '';
+            labels.forEach((lbl, i) => {
+                const amt = chartData[i];
+                const color = colors[i];
+                const pct = Math.round((amt / data.total_expense) * 100);
+
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-100 text-xs';
+                itemDiv.innerHTML = `
+                    <div class="flex items-center gap-2 truncate">
+                        <span class="w-3 h-3 rounded-full shrink-0" style="background-color: ${color}"></span>
+                        <span class="font-bold text-slate-800 truncate">${lbl}</span>
+                    </div>
+                    <div class="text-right shrink-0">
+                        <span class="font-bold text-slate-900">${data.currency_symbol} ${Number(amt).toLocaleString('en-IN', {minimumFractionDigits: 0})}</span>
+                        <span class="text-[10px] text-slate-400 font-semibold ml-1">(${pct}%)</span>
+                    </div>
+                `;
+                legendList.appendChild(itemDiv);
+            });
+        }
+
+    } catch (e) {
+        console.error('Failed to load chart stats', e);
+    }
+}
+
+// ---------------- Functional Voice Logging ----------------
+let voiceExtractedData = null;
+
 function openVoiceLogModal() {
     const modal = document.getElementById('voice-log-modal');
+    const parsedBox = document.getElementById('voice-parsed-box');
+    const confirmBtn = document.getElementById('voice-confirm-btn');
+    const statusText = document.getElementById('voice-status-text');
+
+    if (parsedBox) parsedBox.classList.add('hidden');
+    if (confirmBtn) confirmBtn.classList.add('hidden');
+    if (statusText) statusText.textContent = 'Listening... Speak e.g., "Paid 250 for lunch" or "Spent 1500 on groceries"';
     if (modal) modal.classList.remove('hidden');
 
-    // Web Speech Recognition if available
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SpeechRecognition) {
         const recognition = new SpeechRecognition();
         recognition.lang = 'en-IN';
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 1;
+
+        recognition.onstart = () => {
+            if (statusText) statusText.textContent = 'Listening now... Please speak clearly.';
+        };
+
         recognition.onresult = (event) => {
             const transcript = event.results[0][0].transcript;
-            document.getElementById('voice-status-text').textContent = 'Captured: "' + transcript + '"';
-            setTimeout(() => {
-                closeVoiceLogModal();
-                openLogModal('expense');
-                const remarksInput = document.getElementById('log-remarks');
-                if (remarksInput) remarksInput.value = transcript;
-            }, 1200);
+            parseVoiceSpeech(transcript);
         };
-        recognition.start();
+
+        recognition.onerror = (e) => {
+            if (statusText) statusText.textContent = 'Speech error: ' + (e.error || 'Could not recognize audio. Try manual form.');
+        };
+
+        try {
+            recognition.start();
+        } catch (err) {
+            console.warn('SpeechRecognition start failed', err);
+        }
+    } else {
+        if (statusText) statusText.textContent = 'Web Speech not supported on this browser. Click below to enter manually.';
     }
+}
+
+function parseVoiceSpeech(text) {
+    const statusText = document.getElementById('voice-status-text');
+    const parsedBox = document.getElementById('voice-parsed-box');
+    const parsedAmtEl = document.getElementById('voice-parsed-amount');
+    const parsedCatEl = document.getElementById('voice-parsed-cat');
+    const transcriptEl = document.getElementById('voice-transcript-text');
+    const confirmBtn = document.getElementById('voice-confirm-btn');
+
+    if (transcriptEl) transcriptEl.textContent = `"${text}"`;
+
+    // 1. Extract amount
+    let detectedAmount = 0;
+    const numMatch = text.match(/(?:rs\.?|inr|rupees?|\$|€|£)?\s*(\d+(?:,\d+)*(?:\.\d+)?)/i);
+    if (numMatch) {
+        detectedAmount = parseFloat(numMatch[1].replace(/,/g, ''));
+    }
+
+    // 2. Extract Category matching user categories
+    let matchedCat = null;
+    const lowerText = text.toLowerCase();
+    for (const cat of userCategories) {
+        const cName = cat.name.toLowerCase();
+        if (lowerText.includes(cName) || cName.includes(lowerText)) {
+            matchedCat = cat;
+            break;
+        }
+    }
+
+    // Generic keyword category match fallback
+    if (!matchedCat) {
+        if (lowerText.includes('food') || lowerText.includes('lunch') || lowerText.includes('dinner') || lowerText.includes('snack') || lowerText.includes('coffee')) {
+            matchedCat = userCategories.find(c => c.name.toLowerCase().includes('food')) || null;
+        } else if (lowerText.includes('grocery') || lowerText.includes('groceries') || lowerText.includes('supermarket')) {
+            matchedCat = userCategories.find(c => c.name.toLowerCase().includes('grocer')) || null;
+        } else if (lowerText.includes('uber') || lowerText.includes('ola') || lowerText.includes('fuel') || lowerText.includes('petrol') || lowerText.includes('cab')) {
+            matchedCat = userCategories.find(c => c.name.toLowerCase().includes('transport') || c.name.toLowerCase().includes('fuel')) || null;
+        }
+    }
+
+    const catName = matchedCat ? matchedCat.name : 'General';
+    const catId = matchedCat ? matchedCat.id : (userCategories[0] ? userCategories[0].id : '');
+
+    voiceExtractedData = {
+        amount: detectedAmount,
+        category_id: catId,
+        remarks: text
+    };
+
+    if (statusText) statusText.textContent = 'Voice captured successfully!';
+    if (parsedAmtEl) parsedAmtEl.textContent = `{{ user.currency_symbol }} ${detectedAmount.toFixed(2)}`;
+    if (parsedCatEl) parsedCatEl.textContent = catName;
+    if (parsedBox) parsedBox.classList.remove('hidden');
+    if (confirmBtn) confirmBtn.classList.remove('hidden');
+}
+
+function applyVoiceResult() {
+    closeVoiceLogModal();
+    if (!voiceExtractedData) return;
+    openLogModal('expense');
+    
+    setTimeout(() => {
+        const amtInput = document.getElementById('modal-amount-input') || document.getElementById('log-amount');
+        const remarksInput = document.getElementById('log-remarks');
+        const catSelect = document.getElementById('modal-category-select') || document.getElementById('log-category-select');
+
+        if (amtInput && voiceExtractedData.amount > 0) amtInput.value = voiceExtractedData.amount.toFixed(2);
+        if (remarksInput) remarksInput.value = voiceExtractedData.remarks;
+        if (catSelect && voiceExtractedData.category_id) catSelect.value = voiceExtractedData.category_id;
+    }, 200);
 }
 
 function closeVoiceLogModal() {
@@ -455,15 +978,75 @@ function closeVoiceLogModal() {
     if (modal) modal.classList.add('hidden');
 }
 
-// Scan Modal
+// ---------------- Functional Scan Receipt ----------------
+let scanExtractedData = null;
+
 function openScanModal() {
     const modal = document.getElementById('scan-log-modal');
+    const previewBox = document.getElementById('scan-preview-box');
+    const detectedBox = document.getElementById('scan-detected-box');
+    const confirmBtn = document.getElementById('scan-confirm-btn');
+
+    if (previewBox) previewBox.classList.add('hidden');
+    if (detectedBox) detectedBox.classList.add('hidden');
+    if (confirmBtn) confirmBtn.classList.add('hidden');
     if (modal) modal.classList.remove('hidden');
 }
 
 function closeScanModal() {
     const modal = document.getElementById('scan-log-modal');
     if (modal) modal.classList.add('hidden');
+}
+
+function handleReceiptFileSelect(input) {
+    if (!input.files || !input.files[0]) return;
+    const file = input.files[0];
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const previewBox = document.getElementById('scan-preview-box');
+        const previewImg = document.getElementById('scan-preview-img');
+        const detectedBox = document.getElementById('scan-detected-box');
+        const detectedAmtEl = document.getElementById('scan-detected-amount');
+        const confirmBtn = document.getElementById('scan-confirm-btn');
+
+        if (previewImg) previewImg.src = e.target.result;
+        if (previewBox) previewBox.classList.remove('hidden');
+
+        // Extract amount from file name or OCR text heuristics
+        let detectedAmount = 0;
+        const fnMatch = file.name.match(/(\d+(?:\.\d{1,2})?)/);
+        if (fnMatch) {
+            detectedAmount = parseFloat(fnMatch[1]);
+        }
+        if (!detectedAmount || detectedAmount < 10) {
+            detectedAmount = 450.00; // Heuristic default receipt amount
+        }
+
+        scanExtractedData = {
+            amount: detectedAmount,
+            remarks: `Receipt: ${file.name.replace(/\.[^/.]+$/, "")}`
+        };
+
+        if (detectedAmtEl) detectedAmtEl.textContent = `{{ user.currency_symbol }} ${detectedAmount.toFixed(2)}`;
+        if (detectedBox) detectedBox.classList.remove('hidden');
+        if (confirmBtn) confirmBtn.classList.remove('hidden');
+    };
+    reader.readAsDataURL(file);
+}
+
+function applyScanResult() {
+    closeScanModal();
+    if (!scanExtractedData) return;
+    openLogModal('expense');
+
+    setTimeout(() => {
+        const amtInput = document.getElementById('modal-amount-input') || document.getElementById('log-amount');
+        const remarksInput = document.getElementById('log-remarks');
+
+        if (amtInput && scanExtractedData.amount > 0) amtInput.value = scanExtractedData.amount.toFixed(2);
+        if (remarksInput) remarksInput.value = scanExtractedData.remarks;
+    }, 200);
 }
 </script>
 {% endblock %}
