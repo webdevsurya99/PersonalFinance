@@ -111,6 +111,35 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   box-shadow: 0 16px 40px -4px rgba(15, 23, 42, 0.22), 0 4px 16px rgba(0, 0, 0, 0.1) !important;
 }
 
+/* Desktop Fixed Sidebar (Ensures zero gap to bottom of screen) */
+@media (min-width: 1024px) {
+  .desktop-sidebar {
+    position: fixed !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    width: 16rem !important;
+    height: 100vh !important;
+    min-height: 100vh !important;
+    max-height: 100vh !important;
+    z-index: 30 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    background-color: #FFFFFF !important;
+    border-right: 1px solid rgba(226, 232, 240, 0.9) !important;
+    box-shadow: 1px 0 3px 0 rgba(0, 0, 0, 0.02) !important;
+    overflow-y: auto !important;
+    box-sizing: border-box !important;
+  }
+  .desktop-main-wrapper {
+    margin-left: 16rem !important;
+    width: calc(100% - 16rem) !important;
+    min-height: 100vh !important;
+    flex: 1 1 auto !important;
+  }
+}
+
 /* Realistic Physical Wallet Card (Image 1) */
 .wallet-card-main {
   background: linear-gradient(135deg, #1b283f 0%, #0f172a 60%, #060911 100%);

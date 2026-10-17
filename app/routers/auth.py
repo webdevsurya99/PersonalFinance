@@ -19,8 +19,73 @@ templates = Jinja2Templates(directory="app/templates")
 def get_now_utc() -> datetime.datetime:
     return datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
 
+def clean_and_deduplicate_user_categories(db: Session, user_id: int):
+    """
+    Deduplicates categories for a user, merges old redundant categories into the streamlined
+    set, re-points any transactions to the consolidated category, and deletes duplicates.
+    """
+    user_cats = db.query(Category).filter(Category.user_id == user_id).all()
+    if not user_cats:
+        return
+
+    # Name normalization mapping to streamline old verbose categories into clean ones
+    NORMALIZE_MAP = {
+        "groceries & supermarket": "Groceries",
+        "fuel & transport": "Transportation",
+        "electricity & bills": "Bills & Utilities",
+        "shopping & lifestyle": "Shopping",
+        "movies & entertainment": "Entertainment",
+        "travel & holidays": "Entertainment",
+        "mobile & subscriptions": "Bills & Utilities",
+        "education & courses": "Education",
+        "personal care & grooming": "Shopping",
+        "vehicle maintenance": "Transportation",
+        "gifts & donations": "General Expenses",
+        "freelance & consulting": "Freelance & Business",
+        "investments & dividends": "Investments",
+        "rental income": "Other Income",
+        "cashback & rewards": "Other Income",
+        "bonus & incentives": "Monthly Salary"
+    }
+
+    groups = {}
+    for cat in user_cats:
+        raw_key = cat.name.strip().lower()
+        target_name = NORMALIZE_MAP.get(raw_key, cat.name.strip())
+        key = (target_name.lower(), cat.type)
+        if key not in groups:
+            groups[key] = []
+        groups[key].append((target_name, cat))
+
+    for key, items in groups.items():
+        target_name = items[0][0]
+        primary = None
+        best_count = -1
+        for t_name, c in items:
+            cnt = db.query(Transaction).filter(Transaction.category_id == c.id).count()
+            if cnt > best_count:
+                best_count = cnt
+                primary = c
+
+        primary.name = target_name
+        for default_cat in DEFAULT_CATEGORIES:
+            if default_cat["name"].lower() == target_name.lower() and default_cat["type"] == primary.type:
+                primary.icon = default_cat["icon"]
+                primary.color = default_cat["color"]
+                break
+
+        for t_name, c in items:
+            if c.id != primary.id:
+                db.query(Transaction).filter(Transaction.category_id == c.id).update(
+                    {"category_id": primary.id}, synchronize_session=False
+                )
+                db.delete(c)
+
+    db.commit()
+
 def initialize_default_categories(db: Session, user: User):
     """Seed initial categories for newly registered user without duplicating."""
+    clean_and_deduplicate_user_categories(db, user.id)
     existing_names = {c.name.strip().lower() for c in db.query(Category).filter(Category.user_id == user.id).all()}
     for cat in DEFAULT_CATEGORIES:
         if cat["name"].strip().lower() not in existing_names:

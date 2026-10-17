@@ -789,6 +789,53 @@ def test_admin_backup_engine_and_lifecycle(client):
     assert del_res.status_code == 303
     assert not os.path.exists(os.path.join("backups", test_snapshot))
 
+def test_expense_breakdown_analytics_page(client):
+    """Test dedicated Expense Breakdown & Analytics page with multi-period filters."""
+    db = TestingSessionLocal()
+    user = User(
+        email="analytics_user@example.com",
+        full_name="Analytics User",
+        hashed_password=hash_password("Pass1234!"),
+        currency_symbol="₹"
+    )
+    db.add(user)
+    db.commit()
+    user_id = user.id
+    user_email = user.email
+
+    cat = Category(user_id=user_id, name="Groceries", type="expense", icon="🛒", color="#10B981")
+    db.add(cat)
+    db.commit()
+
+    txn = Transaction(
+        user_id=user_id,
+        category_id=cat.id,
+        type="expense",
+        amount=4500.0,
+        date=datetime.date(2026, 10, 5),
+        remarks="Weekly Groceries"
+    )
+    db.add(txn)
+    db.commit()
+    db.close()
+
+    token = create_access_token(data={"sub": str(user_id), "email": user_email})
+    client.cookies.set("fin_session_token", token)
+
+    # 1. Default load
+    res = client.get("/analytics")
+    assert res.status_code == 200
+    assert "Expense Breakdown" in res.text
+    assert "Category Breakdown" in res.text
+    assert "Timeline Trend" in res.text
+
+    # 2. Period load
+    res_period = client.get("/analytics?period=this_month")
+    assert res_period.status_code == 200
+    assert "This Month" in res_period.text
+    assert "Weekly Groceries" in res_period.text or "4,500" in res_period.text
+
+
 
 
 

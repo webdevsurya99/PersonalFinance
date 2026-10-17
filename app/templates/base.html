@@ -34,7 +34,7 @@
     <div class="flex-1 flex flex-col lg:flex-row min-h-screen">
         
         <!-- Desktop Sidebar (Hidden on mobile) -->
-        <aside class="hidden lg:flex lg:flex-col w-64 h-screen sticky top-0 overflow-y-auto bg-white border-r border-slate-200/80 p-5 shrink-0 justify-between shadow-xs">
+        <aside class="hidden lg:flex desktop-sidebar p-5 shrink-0">
             <div class="space-y-6">
                 <!-- Brand Logo -->
                 <div class="flex items-center gap-3 px-2">
@@ -59,12 +59,16 @@
                         <i class="fa-solid fa-house w-5 text-center text-sm"></i>
                         <span>Home</span>
                     </a>
-                    <a href="/budgets" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-colors {% if request.url.path.startswith('/budgets') %}bg-slate-900 text-white font-semibold shadow-xs{% else %}text-slate-600 hover:text-slate-900 hover:bg-slate-100{% endif %}">
+                    <a href="/analytics" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-colors {% if request.url.path.startswith('/analytics') %}bg-slate-900 text-white font-semibold shadow-xs{% else %}text-slate-600 hover:text-slate-900 hover:bg-slate-100{% endif %}">
                         <i class="fa-solid fa-chart-pie w-5 text-center text-sm"></i>
+                        <span>Expense Breakdown</span>
+                    </a>
+                    <a href="/budgets" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-colors {% if request.url.path.startswith('/budgets') %}bg-slate-900 text-white font-semibold shadow-xs{% else %}text-slate-600 hover:text-slate-900 hover:bg-slate-100{% endif %}">
+                        <i class="fa-solid fa-wallet w-5 text-center text-sm"></i>
                         <span>Budgets & Insights</span>
                     </a>
                     <a href="/transactions" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-colors {% if request.url.path.startswith('/transactions') %}bg-slate-900 text-white font-semibold shadow-xs{% else %}text-slate-600 hover:text-slate-900 hover:bg-slate-100{% endif %}">
-                        <i class="fa-solid fa-chart-simple w-5 text-center text-sm"></i>
+                        <i class="fa-solid fa-list-check w-5 text-center text-sm"></i>
                         <span>Transactions</span>
                     </a>
                     <a href="/accounts" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-colors {% if request.url.path.startswith('/accounts') %}bg-slate-900 text-white font-semibold shadow-xs{% else %}text-slate-600 hover:text-slate-900 hover:bg-slate-100{% endif %}">
@@ -123,7 +127,7 @@
         </aside>
 
         <!-- Main Content Area -->
-        <div class="flex-1 flex flex-col min-w-0">
+        <div class="flex-1 flex flex-col min-w-0 desktop-main-wrapper">
             
             <!-- Top Bar (Seamless with iOS Status Bar & Dynamic Island) -->
             <header class="border-b border-slate-200/80 px-4 sm:px-8 flex items-center justify-between bg-white/80 backdrop-blur-md sticky top-0 z-30 pt-[env(safe-area-inset-top,0px)] h-[calc(3.75rem+env(safe-area-inset-top,0px))] box-border">
@@ -290,29 +294,31 @@
         </div>
     </div>
 
-    <!-- Floating Bottom Navigation Bar (Solid Background & High Contrast) -->
-    <nav class="lg:hidden fixed bottom-4 left-4 right-4 z-40 max-w-md mx-auto floating-nav bg-white shadow-[0_12px_36px_rgba(15,23,42,0.25)] border border-slate-200/90 rounded-full px-5 py-2.5 flex items-center justify-between text-[11px] font-medium pb-[calc(0.625rem+env(safe-area-inset-bottom,0px))]">
-        <a href="/dashboard" class="flex flex-col items-center gap-0.5 transition-colors {% if request.url.path == '/dashboard' or request.url.path == '/' %}text-slate-900 font-bold{% else %}text-slate-400 hover:text-slate-600{% endif %}">
-            <i class="fa-solid fa-house text-lg"></i>
-            <span class="text-[10px]">Home</span>
+    <!-- Floating Bottom Navigation Bar (Solid Background & Symmetrical Alignment) -->
+    <nav class="lg:hidden fixed bottom-4 left-4 right-4 z-40 max-w-md mx-auto floating-nav bg-white shadow-[0_12px_36px_rgba(15,23,42,0.25)] border border-slate-200/90 rounded-full px-2 py-2 flex items-center justify-between text-[11px] font-medium pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))]">
+        <a href="/dashboard" class="flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors {% if request.url.path == '/dashboard' or request.url.path == '/' %}text-slate-900 font-extrabold{% else %}text-slate-400 hover:text-slate-600{% endif %}">
+            <i class="fa-solid fa-house text-base"></i>
+            <span class="text-[10px] leading-tight font-bold">Home</span>
         </a>
-        <a href="/transactions" class="flex flex-col items-center gap-0.5 transition-colors {% if request.url.path.startswith('/transactions') %}text-slate-900 font-bold{% else %}text-slate-400 hover:text-slate-600{% endif %}">
-            <i class="fa-solid fa-chart-simple text-lg"></i>
-            <span class="text-[10px]">Analytics</span>
+        <a href="/analytics" class="flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors {% if request.url.path.startswith('/analytics') %}text-slate-900 font-extrabold{% else %}text-slate-400 hover:text-slate-600{% endif %}">
+            <i class="fa-solid fa-chart-pie text-base"></i>
+            <span class="text-[10px] leading-tight font-bold">Breakdown</span>
         </a>
         
         <!-- Center Floating Action Button (Elevated Dark Navy) -->
-        <button onclick="openLogModal('expense')" title="Log Transaction" class="-mt-7 w-13 h-13 rounded-full bg-[#0F172A] text-white flex items-center justify-center shadow-lg shadow-slate-900/30 border-4 border-[#F8FAFC] active:scale-95 transition-all cursor-pointer">
-            <i class="fa-solid fa-plus text-lg"></i>
-        </button>
+        <div class="flex-1 flex items-center justify-center">
+            <button type="button" onclick="openLogModal('expense')" title="Log Transaction" class="-mt-7 w-12 h-12 rounded-full bg-[#0F172A] text-white flex items-center justify-center shadow-lg shadow-slate-900/35 border-4 border-white active:scale-95 transition-all cursor-pointer">
+                <i class="fa-solid fa-plus text-base"></i>
+            </button>
+        </div>
 
-        <a href="/budgets" class="flex flex-col items-center gap-0.5 transition-colors {% if request.url.path.startswith('/budgets') %}text-slate-900 font-bold{% else %}text-slate-400 hover:text-slate-600{% endif %}">
-            <i class="fa-solid fa-chart-pie text-lg"></i>
-            <span class="text-[10px]">Budgets</span>
+        <a href="/budgets" class="flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors {% if request.url.path.startswith('/budgets') %}text-slate-900 font-extrabold{% else %}text-slate-400 hover:text-slate-600{% endif %}">
+            <i class="fa-solid fa-wallet text-base"></i>
+            <span class="text-[10px] leading-tight font-bold">Budgets</span>
         </a>
-        <a href="/profile" class="flex flex-col items-center gap-0.5 transition-colors {% if request.url.path.startswith('/profile') %}text-slate-900 font-bold{% else %}text-slate-400 hover:text-slate-600{% endif %}">
-            <i class="fa-regular fa-user text-lg"></i>
-            <span class="text-[10px]">Profile</span>
+        <a href="/transactions" class="flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors {% if request.url.path.startswith('/transactions') %}text-slate-900 font-extrabold{% else %}text-slate-400 hover:text-slate-600{% endif %}">
+            <i class="fa-solid fa-list-check text-base"></i>
+            <span class="text-[10px] leading-tight font-bold">Transactions</span>
         </a>
     </nav>
 

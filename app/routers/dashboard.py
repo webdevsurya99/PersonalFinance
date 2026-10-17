@@ -131,7 +131,7 @@ async def dashboard_page(
 
     # Categories & Trips for fast lodging modal
     categories = db.query(Category).filter(
-        (Category.user_id == current_user.id) | (Category.is_system == True)
+        Category.user_id == current_user.id
     ).order_by(Category.name.asc()).all()
     
     active_trips = db.query(Trip).filter(
@@ -215,6 +215,94 @@ async def dashboard_page(
             "active_trips": active_trips,
             "recent_transactions": recent_transactions,
             "due_card_alerts": due_card_alerts,
+            "csrf_token": csrf_token
+        }
+    )
+
+@router.get("/analytics", response_class=HTMLResponse)
+async def analytics_page(
+    request: Request,
+    period: str = Query("this_month"),
+    start_date: Optional[str] = Query(None),
+    end_date: Optional[str] = Query(None),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    current_date = DateProvider.get_current_date(db)
+    is_simulated = DateProvider.is_date_simulated(db)
+    start_dt, end_dt = get_date_range_for_period(period, current_date, start_date, end_date)
+
+    txns = db.query(Transaction).filter(
+        Transaction.user_id == current_user.id,
+        Transaction.date >= start_dt,
+        Transaction.date <= end_dt
+    ).order_by(Transaction.date.desc(), Transaction.id.desc()).all()
+
+    total_income = sum(t.amount for t in txns if t.type == "income")
+    total_expense = sum(t.amount for t in txns if t.type == "expense")
+    net_savings = total_income - total_expense
+    savings_rate = round((net_savings / total_income * 100) if total_income > 0 else 0, 1)
+
+    cat_expenses = {}
+    for t in txns:
+        if t.type == "expense":
+            cat_name = t.category.name if t.category else "General"
+            cat_icon = t.category.icon if t.category else "📦"
+            cat_color = t.category.color if t.category else "#94A3B8"
+            cat_id = t.category.id if t.category else 0
+            if cat_name not in cat_expenses:
+                cat_expenses[cat_name] = {
+                    "id": cat_id,
+                    "name": cat_name,
+                    "icon": cat_icon,
+                    "color": cat_color,
+                    "amount": 0.0,
+                    "count": 0
+                }
+            cat_expenses[cat_name]["amount"] += t.amount
+            cat_expenses[cat_name]["count"] += 1
+
+    sorted_categories = sorted(cat_expenses.values(), key=lambda x: x["amount"], reverse=True)
+    for c in sorted_categories:
+        c["percentage"] = round((c["amount"] / total_expense * 100), 1) if total_expense > 0 else 0
+        c["amount_formatted"] = format_inr(c["amount"])
+
+    categories = db.query(Category).filter(
+        Category.user_id == current_user.id
+    ).order_by(Category.name.asc()).all()
+
+    bank_accounts = db.query(BankAccount).filter(BankAccount.user_id == current_user.id, BankAccount.is_active == True).all()
+    credit_cards = db.query(CreditCard).filter(CreditCard.user_id == current_user.id, CreditCard.is_active == True).all()
+    active_trips = db.query(Trip).filter(Trip.user_id == current_user.id, Trip.status.in_(["active", "planned"])).all()
+
+    csrf_token = generate_csrf_token(current_user.id)
+
+    return templates.TemplateResponse(
+        request=request,
+        name="dashboard/analytics.html",
+        context={
+            "user": current_user,
+            "period": period,
+            "start_date": start_dt,
+            "end_date": end_dt,
+            "custom_start_str": start_dt.strftime("%Y-%m-%d"),
+            "custom_end_str": end_dt.strftime("%Y-%m-%d"),
+            "date_range_display": f"{start_dt.strftime('%d %b')} – {end_dt.strftime('%d %b %Y')}",
+            "total_income": total_income,
+            "total_expense": total_expense,
+            "net_savings": net_savings,
+            "savings_rate": savings_rate,
+            "total_income_formatted": format_inr(total_income),
+            "total_expense_formatted": format_inr(total_expense),
+            "net_savings_formatted": format_inr(net_savings),
+            "sorted_categories": sorted_categories,
+            "txns": txns,
+            "categories": categories,
+            "bank_accounts": bank_accounts,
+            "credit_cards": credit_cards,
+            "active_trips": active_trips,
+            "current_date": current_date,
+            "is_simulated_date": is_simulated,
             "csrf_token": csrf_token
         }
     )

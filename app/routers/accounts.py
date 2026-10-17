@@ -21,7 +21,7 @@ def get_now_utc() -> datetime.datetime:
 
 def get_common_context(db: Session, user: User) -> dict:
     categories = db.query(Category).filter(
-        (Category.user_id == user.id) | (Category.is_system == True)
+        Category.user_id == user.id
     ).order_by(Category.name.asc()).all()
     bank_accounts = db.query(BankAccount).filter(BankAccount.user_id == user.id, BankAccount.is_active == True).all()
     credit_cards = db.query(CreditCard).filter(CreditCard.user_id == user.id, CreditCard.is_active == True).all()

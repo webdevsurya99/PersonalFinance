@@ -83,7 +83,11 @@
                         {% if t.type == 'income' %}
                             <i class="fa-solid fa-arrow-down-left"></i>
                         {% elif t.category and t.category.icon %}
-                            <i class="{% if t.category.icon.startswith('fa-') %}{{ t.category.icon }}{% else %}fa-solid fa-{{ t.category.icon }}{% endif %}"></i>
+                            {% if t.category.icon.startswith('fa-') %}
+                            <i class="{{ t.category.icon }}"></i>
+                            {% else %}
+                            <span class="text-base select-none leading-none">{{ t.category.icon }}</span>
+                            {% endif %}
                         {% else %}
                             <i class="fa-solid fa-receipt"></i>
                         {% endif %}

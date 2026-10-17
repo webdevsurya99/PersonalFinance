@@ -269,30 +269,22 @@ INDIAN_CREDIT_CARDS = [
 ]
 
 DEFAULT_CATEGORIES = [
-    # Expense Categories
+    # Core Expense Categories
     {"name": "Food & Dining", "type": "expense", "icon": "🍔", "color": "#EF4444"},
-    {"name": "Groceries & Supermarket", "type": "expense", "icon": "🛒", "color": "#10B981"},
-    {"name": "Fuel & Transport", "type": "expense", "icon": "⛽", "color": "#F59E0B"},
+    {"name": "Groceries", "type": "expense", "icon": "🛒", "color": "#10B981"},
+    {"name": "Transportation", "type": "expense", "icon": "🚗", "color": "#F59E0B"},
     {"name": "Rent & Housing", "type": "expense", "icon": "🏠", "color": "#8B5CF6"},
-    {"name": "Electricity & Bills", "type": "expense", "icon": "💡", "color": "#3B82F6"},
-    {"name": "Shopping & Lifestyle", "type": "expense", "icon": "🛍️", "color": "#EC4899"},
-    {"name": "Travel & Holidays", "type": "expense", "icon": "✈️", "color": "#06B6D4"},
+    {"name": "Bills & Utilities", "type": "expense", "icon": "💡", "color": "#3B82F6"},
+    {"name": "Shopping", "type": "expense", "icon": "🛍️", "color": "#EC4899"},
+    {"name": "Entertainment", "type": "expense", "icon": "🎬", "color": "#F97316"},
     {"name": "Health & Medical", "type": "expense", "icon": "🏥", "color": "#14B8A6"},
-    {"name": "Movies & Entertainment", "type": "expense", "icon": "🎬", "color": "#F97316"},
-    {"name": "Mobile & Subscriptions", "type": "expense", "icon": "📱", "color": "#6366F1"},
-    {"name": "Education & Courses", "type": "expense", "icon": "📚", "color": "#84CC16"},
-    {"name": "Personal Care & Grooming", "type": "expense", "icon": "💇", "color": "#D946EF"},
-    {"name": "Vehicle Maintenance", "type": "expense", "icon": "🚗", "color": "#64748B"},
-    {"name": "Gifts & Donations", "type": "expense", "icon": "🎁", "color": "#F43F5E"},
+    {"name": "Education", "type": "expense", "icon": "📚", "color": "#84CC16"},
     {"name": "General Expenses", "type": "expense", "icon": "📦", "color": "#94A3B8"},
     
-    # Income Categories
+    # Core Income Categories
     {"name": "Monthly Salary", "type": "income", "icon": "💵", "color": "#10B981"},
-    {"name": "Freelance & Consulting", "type": "income", "icon": "💻", "color": "#3B82F6"},
-    {"name": "Investments & Dividends", "type": "income", "icon": "📈", "color": "#8B5CF6"},
-    {"name": "Rental Income", "type": "income", "icon": "🏢", "color": "#06B6D4"},
-    {"name": "Cashback & Rewards", "type": "income", "icon": "🎁", "color": "#F59E0B"},
-    {"name": "Bonus & Incentives", "type": "income", "icon": "⭐", "color": "#EAB308"},
+    {"name": "Freelance & Business", "type": "income", "icon": "💻", "color": "#3B82F6"},
+    {"name": "Investments", "type": "income", "icon": "📈", "color": "#8B5CF6"},
     {"name": "Other Income", "type": "income", "icon": "💰", "color": "#6366F1"},
 ]
 

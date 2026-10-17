@@ -122,7 +122,7 @@ async def list_transactions(
 
     # Dropdown lookups
     categories = db.query(Category).filter(
-        (Category.user_id == current_user.id) | (Category.is_system == True)
+        Category.user_id == current_user.id
     ).order_by(Category.name.asc()).all()
 
     bank_accounts = db.query(BankAccount).filter(BankAccount.user_id == current_user.id, BankAccount.is_active == True).all()
@@ -248,7 +248,7 @@ async def edit_transaction_page(
         raise HTTPException(status_code=404, detail="Transaction not found.")
 
     categories = db.query(Category).filter(
-        (Category.user_id == current_user.id) | (Category.is_system == True)
+        Category.user_id == current_user.id
     ).order_by(Category.name.asc()).all()
 
     bank_accounts = db.query(BankAccount).filter(BankAccount.user_id == current_user.id, BankAccount.is_active == True).all()

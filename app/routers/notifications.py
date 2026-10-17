@@ -29,7 +29,7 @@ async def notifications_page(
     ).order_by(Notification.created_at.desc()).all()
 
     categories = db.query(Category).filter(
-        (Category.user_id == current_user.id) | (Category.is_system == True)
+        Category.user_id == current_user.id
     ).order_by(Category.name.asc()).all()
     bank_accounts = db.query(BankAccount).filter(BankAccount.user_id == current_user.id, BankAccount.is_active == True).all()
     credit_cards = db.query(CreditCard).filter(CreditCard.user_id == current_user.id, CreditCard.is_active == True).all()

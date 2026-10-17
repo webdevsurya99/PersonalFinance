@@ -5,7 +5,7 @@
 {% block content %}
 <div class="space-y-6 max-w-4xl mx-auto">
 
-    <!-- Mobile / Top Greeting & Master Period Filter (Single Definitive Source) -->
+    <!-- Mobile / Top Greeting & Current Month Header -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
             <p class="text-xs sm:text-sm font-medium text-slate-500">
@@ -23,42 +23,17 @@
             </h1>
         </div>
 
-        <!-- Master Period Filter Pills (Shown ONLY ONCE on all screen sizes) -->
-        <div class="flex items-center gap-1 bg-white border border-slate-200/90 rounded-2xl p-1 shadow-2xs overflow-x-auto scrollbar-none self-start sm:self-auto max-w-full">
-            <a href="/dashboard?period=this_month" class="px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all {% if period == 'this_month' %}bg-[#0F172A] text-white shadow-xs{% else %}text-slate-500 hover:text-slate-900 hover:bg-slate-50{% endif %}">
-                This Month
+        <!-- Current Month Badge & Quick Link to Full Analytics -->
+        <div class="flex items-center gap-2 self-start sm:self-auto">
+            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200/90 text-xs font-bold text-slate-800 shadow-2xs">
+                <i class="fa-regular fa-calendar text-[11px] text-slate-500"></i>
+                <span>{{ current_date.strftime('%B %Y') }}</span>
+            </span>
+            <a href="/analytics" title="View Full Expense Breakdown & Multi-Period Analytics" class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#0F172A] hover:bg-slate-800 text-white text-xs font-bold shadow-xs transition-all cursor-pointer">
+                <i class="fa-solid fa-chart-pie text-xs"></i>
+                <span>Analytics</span>
             </a>
-            <a href="/dashboard?period=last_month" class="px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all {% if period == 'last_month' %}bg-[#0F172A] text-white shadow-xs{% else %}text-slate-500 hover:text-slate-900 hover:bg-slate-50{% endif %}">
-                Last Month
-            </a>
-            <a href="/dashboard?period=last_30_days" class="px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all {% if period == 'last_30_days' %}bg-[#0F172A] text-white shadow-xs{% else %}text-slate-500 hover:text-slate-900 hover:bg-slate-50{% endif %}">
-                30 Days
-            </a>
-            <a href="/dashboard?period=this_year" class="px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all {% if period == 'this_year' %}bg-[#0F172A] text-white shadow-xs{% else %}text-slate-500 hover:text-slate-900 hover:bg-slate-50{% endif %}">
-                This Year
-            </a>
-            <button type="button" onclick="toggleCustomRangePanel()" class="px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer {% if period == 'custom' %}bg-[#0F172A] text-white shadow-xs{% else %}text-slate-500 hover:text-slate-900 hover:bg-slate-50{% endif %}">
-                <i class="fa-solid fa-sliders text-[10px] mr-1"></i>Custom Range
-            </button>
         </div>
-    </div>
-
-    <!-- Custom Date Range Expander (if user clicks Custom) -->
-    <div id="custom-range-panel" class="{% if period != 'custom' %}hidden{% endif %} p-4 rounded-2xl bg-white border border-slate-200/90 shadow-2xs">
-        <form action="/dashboard" method="GET" class="flex flex-wrap items-center gap-3">
-            <input type="hidden" name="period" value="custom">
-            <div class="flex items-center gap-2">
-                <label class="text-xs font-bold text-slate-500">From:</label>
-                <input type="date" name="start_date" id="custom-start-input" value="{{ custom_start_str }}" class="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900">
-            </div>
-            <div class="flex items-center gap-2">
-                <label class="text-xs font-bold text-slate-500">To:</label>
-                <input type="date" name="end_date" id="custom-end-input" value="{{ custom_end_str }}" class="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900">
-            </div>
-            <button type="submit" class="py-1.5 px-4 bg-[#0F172A] text-white font-bold rounded-xl text-xs hover:bg-slate-800 transition-colors shadow-2xs cursor-pointer">
-                Apply Date Range
-            </button>
-        </form>
     </div>
 
     <!-- Total Balance Section with Eye Toggle -->
@@ -87,87 +62,69 @@
         </div>
     </div>
 
-    <!-- Top KPI Cards Row -->
-    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-        <!-- Live Position / Surplus Card -->
-        <div class="fin-card p-3.5 sm:p-4 flex flex-col justify-between">
+    <!-- 4 Core KPI Cards Row (Prominent High-Contrast Borders on Phone & Desktop) -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <!-- 1. Bank Balance Card -->
+        <div class="bg-white rounded-2xl p-4 sm:p-5 border-2 border-slate-200/90 shadow-2xs flex flex-col justify-between hover:border-slate-300 transition-all">
             <div class="flex items-center justify-between text-slate-400">
-                <span class="text-[11px] font-semibold">Net Position</span>
-                <div class="w-6 h-6 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center text-xs">
-                    <i class="fa-solid fa-wallet"></i>
-                </div>
-            </div>
-            <div class="mt-2">
-                <p id="kpi-live-balance" class="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight">
-                    {{ user.currency_symbol }} {{ live_balance_formatted }}
-                </p>
-                <p class="text-[10px] text-slate-400 font-medium">Banks + Cash − CC</p>
-            </div>
-        </div>
-
-        <!-- Bank Balance Card -->
-        <div class="fin-card p-3.5 sm:p-4 flex flex-col justify-between">
-            <div class="flex items-center justify-between text-slate-400">
-                <span class="text-[11px] font-semibold">Bank Balance</span>
-                <div class="w-6 h-6 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-xs">
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Bank Balance</span>
+                <div class="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-xs">
                     <i class="fa-solid fa-building-columns"></i>
                 </div>
             </div>
-            <div class="mt-2">
-                <p id="kpi-bank-balance" class="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight">
+            <div class="mt-3">
+                <p id="kpi-bank-balance" class="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
                     {{ user.currency_symbol }} {{ total_bank_balance_formatted }}
                 </p>
-                <p class="text-[10px] text-slate-400 font-medium">{{ bank_accounts|length }} Accounts</p>
+                <p class="text-[11px] text-slate-400 font-medium mt-0.5">{{ bank_accounts|length }} Active Accounts</p>
             </div>
         </div>
 
-        <!-- Cash in Hand Card -->
-        <div class="fin-card p-3.5 sm:p-4 flex flex-col justify-between">
+        <!-- 2. Cash in Hand Card -->
+        <div class="bg-white rounded-2xl p-4 sm:p-5 border-2 border-slate-200/90 shadow-2xs flex flex-col justify-between hover:border-slate-300 transition-all">
             <div class="flex items-center justify-between text-slate-400">
-                <span class="text-[11px] font-semibold">Cash in Hand</span>
-                <div class="w-6 h-6 rounded-lg bg-teal-50 text-teal-600 flex items-center justify-center text-xs">
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Cash in Hand</span>
+                <div class="w-8 h-8 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center text-xs">
                     <i class="fa-solid fa-money-bill-wave"></i>
                 </div>
             </div>
-            <div class="mt-2">
-                <p id="kpi-cash-balance" class="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight">
+            <div class="mt-3">
+                <p id="kpi-cash-balance" class="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
                     {{ user.currency_symbol }} {{ cash_balance_formatted }}
                 </p>
-                <p class="text-[10px] text-slate-400 font-medium">Physical Cash</p>
+                <p class="text-[11px] text-slate-400 font-medium mt-0.5">Physical Cash</p>
             </div>
         </div>
 
-        <!-- Total Income Card -->
-        <div class="fin-card p-3.5 sm:p-4 flex flex-col justify-between">
+        <!-- 3. Total Income Card -->
+        <div class="bg-white rounded-2xl p-4 sm:p-5 border-2 border-slate-200/90 shadow-2xs flex flex-col justify-between hover:border-slate-300 transition-all">
             <div class="flex items-center justify-between text-slate-400">
-                <span class="text-[11px] font-semibold">Total Income</span>
-                <div class="w-6 h-6 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs">
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Total Income</span>
+                <div class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs">
                     <i class="fa-solid fa-arrow-down-left"></i>
                 </div>
             </div>
-            <div class="mt-2">
-                <p id="kpi-income" class="text-base sm:text-lg font-extrabold text-emerald-600 tracking-tight">
+            <div class="mt-3">
+                <p id="kpi-income" class="text-lg sm:text-xl font-black text-emerald-600 tracking-tight">
                     +{{ user.currency_symbol }} {{ total_income_formatted }}
                 </p>
-                <p class="text-[10px] text-slate-400 font-medium">In selected period</p>
+                <p class="text-[11px] text-slate-400 font-medium mt-0.5">This Month</p>
             </div>
         </div>
 
-        <!-- Total Expense Card -->
-        <div class="fin-card p-3.5 sm:p-4 flex flex-col justify-between col-span-2 sm:col-span-1">
+        <!-- 4. Total Expense Card -->
+        <div class="bg-white rounded-2xl p-4 sm:p-5 border-2 border-slate-200/90 shadow-2xs flex flex-col justify-between hover:border-slate-300 transition-all">
             <div class="flex items-center justify-between text-slate-400">
-                <span class="text-[11px] font-semibold">Total Expense</span>
-                <div class="w-6 h-6 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center text-xs">
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Total Expense</span>
+                <div class="w-8 h-8 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center text-xs">
                     <i class="fa-solid fa-arrow-up-right"></i>
                 </div>
             </div>
-            <div class="mt-2">
-                <p id="kpi-expense" class="text-base sm:text-lg font-extrabold text-rose-600 tracking-tight">
+            <div class="mt-3">
+                <p id="kpi-expense" class="text-lg sm:text-xl font-black text-rose-600 tracking-tight">
                     -{{ user.currency_symbol }} {{ total_expense_formatted }}
                 </p>
-                <p class="text-[10px] text-slate-400 font-medium">
-                    Savings: {{ savings_rate }}%
-                </p>
+                <p class="text-[11px] text-slate-400 font-medium mt-0.5">Savings: {{ savings_rate }}%</p>
             </div>
         </div>
     </div>
@@ -224,12 +181,12 @@
     {% endif %}
 
     <!-- Expense Breakdown Section (Interactive Visual Donut & Distribution) -->
-    <div class="fin-card p-5 sm:p-6 space-y-4">
+    <div class="bg-white rounded-3xl p-5 sm:p-7 border-2 border-slate-200/90 shadow-sm space-y-5">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
             <div>
                 <h2 class="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight">Expense Breakdown</h2>
                 <p id="chart-period-subtitle" class="text-xs text-slate-400 font-medium mt-0.5">
-                    {{ start_date.strftime('%d %b') }} – {{ end_date.strftime('%d %b %Y') }} &bull; Spent: {{ user.currency_symbol }} {{ total_expense_formatted }}
+                    {{ current_date.strftime('%B %Y') }} Spending &bull; Spent: {{ user.currency_symbol }} {{ total_expense_formatted }}
                 </p>
             </div>
 
@@ -256,7 +213,7 @@
                     <span id="donut-center-amount" class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight mt-0.5">
                         {{ user.currency_symbol }} {{ total_expense_formatted }}
                     </span>
-                    <span id="donut-center-sub" class="text-[10px] text-slate-400 font-medium">In selected period</span>
+                    <span id="donut-center-sub" class="text-[10px] text-slate-400 font-medium">This Month</span>
                 </div>
 
                 <div id="chart-empty-state" class="hidden absolute inset-0 flex flex-col items-center justify-center text-center">
@@ -277,6 +234,15 @@
             <div id="chart-bars-list" class="space-y-3">
                 <!-- Populated dynamically via JS -->
             </div>
+        </div>
+
+        <!-- Link to Full Multi-Period Analytics -->
+        <div class="pt-3 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-2">
+            <span class="text-xs text-slate-400 font-medium">Want multi-period filters or daily cash flow trends?</span>
+            <a href="/analytics" class="text-xs font-bold text-slate-900 hover:text-indigo-600 flex items-center gap-1.5 transition-colors">
+                <span>Detailed Analytics & Trends</span>
+                <i class="fa-solid fa-arrow-right text-[10px]"></i>
+            </a>
         </div>
     </div>
 

@@ -1,0 +1,431 @@
+{% extends "base.html" %}
+
+{% block title %}Expense Breakdown & Analytics - FinMinimal{% endblock %}
+
+{% block content %}
+<div class="space-y-6 max-w-5xl mx-auto">
+
+    <!-- Top Header & Period Filter -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+                <span>Expense Breakdown</span>
+                <span class="text-xs font-bold px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+                    {{ date_range_display }}
+                </span>
+            </h1>
+            <p class="text-xs sm:text-sm text-slate-500 font-medium mt-1">Deep visual analytics, category distribution & spending trends</p>
+        </div>
+
+        <!-- Master Period Filter Selector -->
+        <div class="flex items-center gap-1 bg-white border border-slate-200/90 rounded-2xl p-1 shadow-2xs overflow-x-auto scrollbar-none self-start sm:self-auto max-w-full">
+            <a href="/analytics?period=this_month" class="px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all {% if period == 'this_month' %}bg-[#0F172A] text-white shadow-xs{% else %}text-slate-500 hover:text-slate-900 hover:bg-slate-50{% endif %}">
+                This Month
+            </a>
+            <a href="/analytics?period=last_month" class="px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all {% if period == 'last_month' %}bg-[#0F172A] text-white shadow-xs{% else %}text-slate-500 hover:text-slate-900 hover:bg-slate-50{% endif %}">
+                Last Month
+            </a>
+            <a href="/analytics?period=last_30_days" class="px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all {% if period == 'last_30_days' %}bg-[#0F172A] text-white shadow-xs{% else %}text-slate-500 hover:text-slate-900 hover:bg-slate-50{% endif %}">
+                30 Days
+            </a>
+            <a href="/analytics?period=this_year" class="px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all {% if period == 'this_year' %}bg-[#0F172A] text-white shadow-xs{% else %}text-slate-500 hover:text-slate-900 hover:bg-slate-50{% endif %}">
+                This Year
+            </a>
+            <button type="button" onclick="toggleCustomRangePanel()" class="px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer {% if period == 'custom' %}bg-[#0F172A] text-white shadow-xs{% else %}text-slate-500 hover:text-slate-900 hover:bg-slate-50{% endif %}">
+                <i class="fa-solid fa-sliders text-[10px] mr-1"></i>Custom
+            </button>
+        </div>
+    </div>
+
+    <!-- Custom Date Range Expandable Form -->
+    <div id="custom-range-panel" class="{% if period != 'custom' %}hidden{% endif %} p-4 rounded-2xl bg-white border border-slate-200/90 shadow-2xs">
+        <form action="/analytics" method="GET" class="flex flex-wrap items-center gap-3">
+            <input type="hidden" name="period" value="custom">
+            <div class="flex items-center gap-2">
+                <label class="text-xs font-bold text-slate-500">From:</label>
+                <input type="date" name="start_date" value="{{ custom_start_str }}" class="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900">
+            </div>
+            <div class="flex items-center gap-2">
+                <label class="text-xs font-bold text-slate-500">To:</label>
+                <input type="date" name="end_date" value="{{ custom_end_str }}" class="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900">
+            </div>
+            <button type="submit" class="py-1.5 px-4 bg-[#0F172A] text-white font-bold rounded-xl text-xs hover:bg-slate-800 transition-colors shadow-2xs cursor-pointer">
+                Apply Custom Range
+            </button>
+        </form>
+    </div>
+
+    <!-- Financial KPI Summary Cards (Clean Borders & Sharp Contrast) -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+        <!-- Total Expense -->
+        <div class="bg-white rounded-2xl p-4 sm:p-5 border-2 border-slate-200/90 shadow-2xs flex flex-col justify-between">
+            <div class="flex items-center justify-between text-slate-400">
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Total Spent</span>
+                <div class="w-8 h-8 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-arrow-up-right"></i>
+                </div>
+            </div>
+            <div class="mt-3">
+                <p class="text-xl sm:text-2xl font-black text-rose-600 tracking-tight">
+                    -{{ user.currency_symbol }} {{ total_expense_formatted }}
+                </p>
+                <p class="text-[11px] text-slate-400 font-medium mt-0.5">In selected period</p>
+            </div>
+        </div>
+
+        <!-- Total Income -->
+        <div class="bg-white rounded-2xl p-4 sm:p-5 border-2 border-slate-200/90 shadow-2xs flex flex-col justify-between">
+            <div class="flex items-center justify-between text-slate-400">
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Total Income</span>
+                <div class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-arrow-down-left"></i>
+                </div>
+            </div>
+            <div class="mt-3">
+                <p class="text-xl sm:text-2xl font-black text-emerald-600 tracking-tight">
+                    +{{ user.currency_symbol }} {{ total_income_formatted }}
+                </p>
+                <p class="text-[11px] text-slate-400 font-medium mt-0.5">In selected period</p>
+            </div>
+        </div>
+
+        <!-- Net Savings -->
+        <div class="bg-white rounded-2xl p-4 sm:p-5 border-2 border-slate-200/90 shadow-2xs flex flex-col justify-between">
+            <div class="flex items-center justify-between text-slate-400">
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Net Savings</span>
+                <div class="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-piggy-bank"></i>
+                </div>
+            </div>
+            <div class="mt-3">
+                <p class="text-xl sm:text-2xl font-black {% if net_savings >= 0 %}text-slate-900{% else %}text-rose-600{% endif %} tracking-tight">
+                    {{ user.currency_symbol }} {{ net_savings_formatted }}
+                </p>
+                <p class="text-[11px] text-slate-400 font-medium mt-0.5">Income − Expenses</p>
+            </div>
+        </div>
+
+        <!-- Savings Rate -->
+        <div class="bg-white rounded-2xl p-4 sm:p-5 border-2 border-slate-200/90 shadow-2xs flex flex-col justify-between">
+            <div class="flex items-center justify-between text-slate-400">
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Savings Rate</span>
+                <div class="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-percent"></i>
+                </div>
+            </div>
+            <div class="mt-3">
+                <p class="text-xl sm:text-2xl font-black text-amber-600 tracking-tight">
+                    {{ savings_rate }}%
+                </p>
+                <p class="text-[11px] text-slate-400 font-medium mt-0.5">Saved from income</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Visual Analytics Card: Donut & Dynamic Legend -->
+    <div class="bg-white rounded-3xl p-5 sm:p-7 border-2 border-slate-200/90 shadow-sm space-y-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+            <div>
+                <h2 class="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight">Category Breakdown</h2>
+                <p class="text-xs text-slate-400 font-medium mt-0.5">Distribution of expenses across {{ sorted_categories|length }} categories</p>
+            </div>
+
+            <!-- Visualization Toggle -->
+            <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200/60 self-start sm:self-auto">
+                <button type="button" id="chart-view-donut-btn" onclick="switchChartView('donut')" class="px-3 py-1 text-xs font-bold rounded-lg bg-white text-slate-900 shadow-2xs transition-all cursor-pointer">
+                    <i class="fa-solid fa-chart-pie mr-1"></i> Donut
+                </button>
+                <button type="button" id="chart-view-bar-btn" onclick="switchChartView('bars')" class="px-3 py-1 text-xs font-bold rounded-lg text-slate-500 hover:text-slate-900 transition-all cursor-pointer">
+                    <i class="fa-solid fa-chart-column mr-1"></i> Breakdown
+                </button>
+            </div>
+        </div>
+
+        <!-- Donut & Legend View -->
+        <div id="chart-donut-wrapper" class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+            <!-- Left: Donut Chart with Dynamic Center Hole -->
+            <div class="relative flex items-center justify-center min-h-[260px]">
+                <canvas id="categoryPieChart" class="max-h-[250px] max-w-[250px] z-10"></canvas>
+                
+                <div id="donut-center-info" class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center z-0 transition-all duration-150">
+                    <span id="donut-center-tag" class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Spent</span>
+                    <span id="donut-center-amount" class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-0.5">
+                        {{ user.currency_symbol }} {{ total_expense_formatted }}
+                    </span>
+                    <span id="donut-center-sub" class="text-[10px] text-slate-400 font-medium">In selected period</span>
+                </div>
+
+                <div id="chart-empty-state" class="{% if sorted_categories %}hidden{% endif %} absolute inset-0 flex flex-col items-center justify-center text-center">
+                    <i class="fa-solid fa-chart-pie text-4xl text-slate-300 mb-2"></i>
+                    <p class="text-sm font-bold text-slate-600">No Expenses Recorded</p>
+                    <p class="text-xs text-slate-400">Transactions for this period will appear here</p>
+                </div>
+            </div>
+
+            <!-- Right: Interactive Legend Progress List -->
+            <div id="chart-legend-list" class="space-y-2.5 max-h-[300px] overflow-y-auto pr-1">
+                {% for cat in sorted_categories %}
+                <div class="group p-2.5 sm:p-3 rounded-2xl bg-slate-50/90 hover:bg-white border border-slate-200/80 hover:border-slate-300 shadow-2xs hover:shadow-xs transition-all cursor-pointer"
+                     onmouseenter="highlightChartSlice({{ loop.index0 }}, '{{ cat.name }}', '{{ user.currency_symbol }} {{ cat.amount_formatted }}', '{{ cat.percentage }}%')"
+                     onmouseleave="resetChartSlice()">
+                    <div class="flex items-center justify-between gap-2">
+                        <div class="flex items-center gap-2.5 min-w-0">
+                            <span class="w-7 h-7 rounded-xl flex items-center justify-center text-xs shrink-0 shadow-2xs" style="background-color: {{ cat.color }}; color: #ffffff;">
+                                {% if cat.icon.startswith('fa-') %}<i class="{{ cat.icon }}"></i>{% else %}{{ cat.icon }}{% endif %}
+                            </span>
+                            <span class="text-xs sm:text-sm font-bold text-slate-800 truncate">{{ cat.name }}</span>
+                        </div>
+                        <div class="text-right shrink-0 flex items-baseline gap-1.5">
+                            <span class="text-xs sm:text-sm font-black text-slate-900">{{ user.currency_symbol }} {{ cat.amount_formatted }}</span>
+                            <span class="text-[10px] font-bold text-slate-600 bg-white group-hover:bg-slate-100 px-1.5 py-0.2 rounded-md border border-slate-200/60">{{ cat.percentage }}%</span>
+                        </div>
+                    </div>
+                    <div class="w-full bg-slate-200/70 h-1.5 rounded-full overflow-hidden mt-2">
+                        <div class="h-full rounded-full transition-all duration-500" style="background-color: {{ cat.color }}; width: {{ cat.percentage }}%"></div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="p-8 text-center text-slate-400 text-xs">No expenses recorded for this period.</div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Full-Width Horizontal Bar View -->
+        <div id="chart-bars-wrapper" class="hidden space-y-3 pt-2">
+            <div id="chart-bars-list" class="space-y-3">
+                {% for cat in sorted_categories %}
+                <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
+                    <div class="flex items-center justify-between gap-3">
+                        <div class="flex items-center gap-2.5 min-w-0">
+                            <span class="w-8 h-8 rounded-xl flex items-center justify-center text-xs shrink-0" style="background-color: {{ cat.color }}; color: #ffffff;">
+                                {% if cat.icon.startswith('fa-') %}<i class="{{ cat.icon }}"></i>{% else %}{{ cat.icon }}{% endif %}
+                            </span>
+                            <div>
+                                <span class="text-sm font-bold text-slate-900 block truncate">{{ cat.name }}</span>
+                                <span class="text-[10px] text-slate-400 font-medium">{{ cat.count }} transactions</span>
+                            </div>
+                        </div>
+                        <div class="text-right shrink-0 flex items-center gap-2">
+                            <span class="text-sm sm:text-base font-extrabold text-slate-900">{{ user.currency_symbol }} {{ cat.amount_formatted }}</span>
+                            <span class="text-xs font-bold px-2 py-0.5 rounded-full text-slate-700 bg-white border border-slate-200">{{ cat.percentage }}%</span>
+                        </div>
+                    </div>
+                    <div class="w-full bg-slate-200/60 h-2.5 rounded-full overflow-hidden">
+                        <div class="h-full rounded-full transition-all duration-700 ease-out" style="background-color: {{ cat.color }}; width: {{ cat.percentage }}%"></div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Spending Trends Over Time -->
+    <div class="bg-white rounded-3xl p-5 sm:p-7 border-2 border-slate-200/90 shadow-sm space-y-4">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div>
+                <h2 class="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight">Timeline Trend</h2>
+                <p class="text-xs text-slate-400 font-medium mt-0.5">Daily cash flow & spending trajectory</p>
+            </div>
+        </div>
+        <div class="h-[260px] w-full">
+            <canvas id="timelineTrendChart"></canvas>
+        </div>
+    </div>
+
+</div>
+
+<script>
+let pieChartInstance = null;
+let trendChartInstance = null;
+
+const chartDataLabels = [{% for c in sorted_categories %}"{{ c.name }}",{% endfor %}];
+const chartDataValues = [{% for c in sorted_categories %}{{ c.amount }},{% endfor %}];
+const chartDataColors = [{% for c in sorted_categories %}"{{ c.color }}",{% endfor %}];
+const totalExpenseVal = {{ total_expense }};
+const currencySymbol = "{{ user.currency_symbol }}";
+
+function toggleCustomRangePanel() {
+    const panel = document.getElementById('custom-range-panel');
+    if (panel) panel.classList.toggle('hidden');
+}
+
+function switchChartView(mode) {
+    const donutWrapper = document.getElementById('chart-donut-wrapper');
+    const barsWrapper = document.getElementById('chart-bars-wrapper');
+    const donutBtn = document.getElementById('chart-view-donut-btn');
+    const barBtn = document.getElementById('chart-view-bar-btn');
+
+    if (mode === 'donut') {
+        if (donutWrapper) donutWrapper.classList.remove('hidden');
+        if (barsWrapper) barsWrapper.classList.add('hidden');
+        if (donutBtn) {
+            donutBtn.className = 'px-3 py-1 text-xs font-bold rounded-lg bg-white text-slate-900 shadow-2xs transition-all cursor-pointer';
+        }
+        if (barBtn) {
+            barBtn.className = 'px-3 py-1 text-xs font-bold rounded-lg text-slate-500 hover:text-slate-900 transition-all cursor-pointer';
+        }
+    } else {
+        if (donutWrapper) donutWrapper.classList.add('hidden');
+        if (barsWrapper) barsWrapper.classList.remove('hidden');
+        if (barBtn) {
+            barBtn.className = 'px-3 py-1 text-xs font-bold rounded-lg bg-white text-slate-900 shadow-2xs transition-all cursor-pointer';
+        }
+        if (donutBtn) {
+            donutBtn.className = 'px-3 py-1 text-xs font-bold rounded-lg text-slate-500 hover:text-slate-900 transition-all cursor-pointer';
+        }
+    }
+}
+
+function highlightChartSlice(idx, label, amount, pct) {
+    if (pieChartInstance) {
+        pieChartInstance.setActiveElements([{ datasetIndex: 0, index: idx }]);
+        pieChartInstance.update();
+    }
+    const tagEl = document.getElementById('donut-center-tag');
+    const amtEl = document.getElementById('donut-center-amount');
+    const subEl = document.getElementById('donut-center-sub');
+    if (tagEl) tagEl.textContent = label;
+    if (amtEl) amtEl.textContent = amount;
+    if (subEl) subEl.textContent = `${pct} of total spent`;
+}
+
+function resetChartSlice() {
+    if (pieChartInstance) {
+        pieChartInstance.setActiveElements([]);
+        pieChartInstance.update();
+    }
+    const tagEl = document.getElementById('donut-center-tag');
+    const amtEl = document.getElementById('donut-center-amount');
+    const subEl = document.getElementById('donut-center-sub');
+    if (tagEl) tagEl.textContent = 'Total Spent';
+    if (amtEl) amtEl.textContent = `${currencySymbol} {{ total_expense_formatted }}`;
+    if (subEl) subEl.textContent = 'In selected period';
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    // 1. Donut Chart
+    const ctx = document.getElementById('categoryPieChart');
+    if (ctx && chartDataValues.length > 0) {
+        pieChartInstance = new Chart(ctx.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: chartDataLabels,
+                datasets: [{
+                    data: chartDataValues,
+                    backgroundColor: chartDataColors,
+                    borderWidth: 3,
+                    borderColor: '#ffffff',
+                    hoverOffset: 8,
+                    borderRadius: 4,
+                    spacing: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                cutout: '72%',
+                onHover: (event, activeElements) => {
+                    if (activeElements && activeElements.length > 0) {
+                        const idx = activeElements[0].index;
+                        const catLabel = chartDataLabels[idx];
+                        const catAmt = chartDataValues[idx];
+                        const catPct = Math.round((catAmt / totalExpenseVal) * 100);
+                        highlightChartSlice(idx, catLabel, `${currencySymbol} ${Number(catAmt).toLocaleString('en-IN', {minimumFractionDigits: 0})}`, `${catPct}%`);
+                    } else {
+                        resetChartSlice();
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        enabled: true,
+                        backgroundColor: '#0F172A',
+                        titleFont: { size: 12, weight: 'bold' },
+                        bodyFont: { size: 12 },
+                        padding: 10,
+                        cornerRadius: 12,
+                        callbacks: {
+                            label: function(context) {
+                                const val = context.raw || 0;
+                                const pct = Math.round((val / totalExpenseVal) * 100);
+                                return ` ${currencySymbol} ${Number(val).toLocaleString('en-IN', {minimumFractionDigits: 2})} (${pct}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // 2. Timeline Trend Chart
+    loadTimelineTrend();
+});
+
+async function loadTimelineTrend() {
+    try {
+        const res = await fetch('/api/dashboard/stats?period={{ period }}&start_date={{ custom_start_str }}&end_date={{ custom_end_str }}');
+        if (!res.ok) return;
+        const data = await res.json();
+
+        const trendCtx = document.getElementById('timelineTrendChart');
+        if (!trendCtx) return;
+
+        const labels = data.daily_chart.labels || [];
+        const incomeData = data.daily_chart.income || [];
+        const expenseData = data.daily_chart.expense || [];
+
+        if (trendChartInstance) trendChartInstance.destroy();
+
+        trendChartInstance = new Chart(trendCtx.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Expense',
+                        data: expenseData,
+                        backgroundColor: '#F43F5E',
+                        borderRadius: 6
+                    },
+                    {
+                        label: 'Income',
+                        data: incomeData,
+                        backgroundColor: '#10B981',
+                        borderRadius: 6
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: { font: { size: 10 }, color: '#94A3B8' }
+                    },
+                    y: {
+                        grid: { color: 'rgba(226, 232, 240, 0.6)' },
+                        ticks: {
+                            font: { size: 10 },
+                            color: '#94A3B8',
+                            callback: function(val) {
+                                return currencySymbol + ' ' + Number(val).toLocaleString('en-IN');
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        align: 'end',
+                        labels: { font: { size: 11, weight: 'bold' }, boxWidth: 10, boxHeight: 10, usePointStyle: true }
+                    }
+                }
+            }
+        });
+    } catch (e) {
+        console.error('Failed to load timeline trend', e);
+    }
+}
+</script>
+{% endblock %}

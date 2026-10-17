@@ -61,31 +61,9 @@ def init_db():
             print(f"[INIT] Created default admin account: {settings.ADMIN_DEFAULT_EMAIL}")
 
         # Automatic category repair and deduplication
-        from app.models import Category, Transaction
-        from app.core.presets import DEFAULT_CATEGORIES
-        preset_map = {c["name"].strip().lower(): c for c in DEFAULT_CATEGORIES}
-
         users = db.query(User).all()
         for u in users:
-            user_cats = db.query(Category).filter(Category.user_id == u.id).order_by(Category.id.asc()).all()
-            seen = {}
-            for cat in user_cats:
-                key = (cat.name.strip().lower(), cat.type)
-                if key in seen:
-                    primary = seen[key]
-                    db.query(Transaction).filter(
-                        Transaction.user_id == u.id,
-                        Transaction.category_id == cat.id
-                    ).update({"category_id": primary.id}, synchronize_session=False)
-                    db.delete(cat)
-                else:
-                    seen[key] = cat
-                    if not cat.icon or cat.icon.strip() == "" or cat.icon == "tag":
-                        if key[0] in preset_map:
-                            cat.icon = preset_map[key[0]]["icon"]
-                            if not cat.color or cat.color == "#6366F1":
-                                cat.color = preset_map[key[0]]["color"]
-        db.commit()
+            auth.clean_and_deduplicate_user_categories(db, u.id)
 
         # Check and run scheduled daily backup snapshot if needed
         snap = run_scheduled_backup_if_needed(db)
